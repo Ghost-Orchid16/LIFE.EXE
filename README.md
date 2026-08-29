@@ -11,12 +11,12 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). No API keys or setup are required — the app runs fully in **demo mode** out of the box (see below).
+Open [http://localhost:3000](http://localhost:3000). No API keys or setup are required — the app runs fully in **demo mode** out of the box (see below), or drop in a free [Google AI Studio](https://aistudio.google.com/apikey) key for real model reasoning (see "Connecting real services").
 
 ## What's implemented
 
 - **The Life Engine** — a staged reasoning pipeline (Understand → Context → Clarify → Research → Explore → Simulate → Decide → Act), visualized live while the agent processes a situation.
-- **Dynamic situation understanding** — no forced category picker. A heuristic classifier (`lib/agent/engine.ts`) routes free text across overlapping internal categories (relationships, career, money, conflict, scam, etc.), detects emotional tone/stakes, and decides whether clarification or web research is needed.
+- **Dynamic situation understanding** — no forced category picker. Free text is routed across overlapping internal categories (relationships, career, money, conflict, scam, etc.), with emotional tone/stakes and clarification/research needs detected automatically — either by a real model (Gemini, if `GEMINI_API_KEY` is set) or by a transparent, deterministic heuristic classifier (`lib/agent/engine.ts`) as a zero-setup fallback.
 - **Agent workspace** (`/workspace`) — situation input, live engine progress, structured response modules (summary, what we know/don't know, clarifying questions, strategies, decision frame, research, next step), a persistent context panel, and a follow-up loop that keeps the conversation going instead of restarting from zero.
 - **Decision Simulator** — Option A/B framing with benefits, risks, trade-offs, a branching visualization, and "What if?" hypothetical exploration (clearly labeled as hypothetical, not predictive).
 - **Practice It (Roleplay)** — practice a hard conversation against a simulated counterpart (friend, manager, parent, etc.), then get AI-generated conversation-review scores (clarity, assertiveness, empathy, escalation, goal alignment) — explicitly framed as practice feedback, not a scientific assessment.
@@ -40,7 +40,9 @@ app/
   api/agent/          POST { input } -> full agent turn (server)
   api/research/       POST { query } -> research result (server)
 lib/
-  agent/              engine.ts (classification/strategy/decision/scam/recovery),
+  agent/              engine.ts (heuristic classification/strategy/decision/scam/recovery),
+                      gemini.ts (optional real-model reasoning path),
+                      heuristicTurn.ts (assembles a full turn from engine.ts),
                       roleplay.ts, readBetweenTheLines.ts, testcases.ts, stages.ts
   research/service.ts research abstraction (demo fallback + live-provider seam)
   store/              zustand store (theme, history, settings — persisted)
@@ -50,15 +52,17 @@ components/
 ```
 
 - **Agent logic is isolated from UI.** Every screen calls into `lib/agent/*`, never re-implements reasoning inline.
+- **The model call is a clean seam.** `lib/agent/gemini.ts` is the only place that ever calls Gemini — it's imported exclusively by the server-side `/api/agent` route, never by client code, so `GEMINI_API_KEY` is never exposed to the browser. If it's unset, or a live call throws for any reason, the route transparently falls back to `lib/agent/heuristicTurn.ts` — the app never breaks because of this key.
 - **Research is a clean seam.** `lib/research/service.ts` is the only place that would ever call an external search API — it's imported exclusively by the server-side `/api/research` route, never by client code, so a key is never exposed to the browser.
-- **No fake features.** In demo mode, research results are explicitly labeled `DEMO MODE` and use illustrative placeholder sources — the product never claims to have searched the web when it hasn't.
+- **No fake features.** In demo mode, research results are explicitly labeled `DEMO MODE` and use illustrative placeholder sources — the product never claims to have searched the web when it hasn't. Likewise, ScamSense's risk signals always run through the same fixed, auditable rule set (`analyzeScam` in `lib/agent/engine.ts`) regardless of which reasoning path classified the situation — a security check stays on fixed rules rather than a model's own judgment call.
 
 ## Connecting real services (optional)
 
 Copy `.env.example` to `.env.local`:
 
+- `GEMINI_API_KEY` — a free [Google AI Studio](https://aistudio.google.com/apikey) key. Once set, `/api/agent` routes situations through `lib/agent/gemini.ts` for real model reasoning (classification, strategies, decision framing, recovery plans) instead of the heuristic engine. Optionally override the model with `GEMINI_MODEL` (defaults to `gemini-2.5-flash`).
 - `SEARCH_API_KEY` / `SEARCH_API_URL` — wire up a real web-search provider in `lib/research/service.ts::liveResearch`. Without it, research falls back to the labeled demo layer automatically (and also falls back gracefully if a live call fails).
-- `AI_API_KEY` — reserved for swapping the heuristic classifier in `lib/agent/engine.ts` for a real model call. The heuristic engine works fully without it.
+- `AI_API_KEY` — reserved for a different model provider (e.g. the Anthropic Messages API) if you'd rather use that instead of Gemini. Not read anywhere yet.
 
 ## Notes on scope
 
