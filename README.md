@@ -13,6 +13,12 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). No API keys or setup are required — the app runs fully in **demo mode** out of the box (see below).
 
+## Deployment
+
+LIFE.EXE ships as a static export (`output: "export"` in `next.config.ts`) — no Node server required. `.github/workflows/deploy-pages.yml` builds it and publishes to a `gh-pages` branch on every push to `main`; point the repo's **Settings → Pages → Build and deployment → Branch** at `gh-pages` and it's live at `https://<owner>.github.io/<repo>/`.
+
+To build the same static export locally: `GITHUB_PAGES=true npm run build` (the `out/` folder is what gets deployed). Running `npm run build` without that env var builds the same static export without the `/LIFE.EXE` path prefix, for hosting at a domain root instead.
+
 ## What's implemented
 
 - **The Life Engine** — a staged reasoning pipeline (Understand → Context → Clarify → Research → Explore → Simulate → Decide → Act), visualized live while the agent processes a situation.
@@ -37,10 +43,9 @@ app/
   workspace/          the agent workspace (client)
   history/            local history view
   test-lab/           agent test lab
-  api/agent/          POST { input } -> full agent turn (server)
-  api/research/       POST { query } -> research result (server)
 lib/
   agent/              engine.ts (classification/strategy/decision/scam/recovery),
+                      runAgentTurn.ts (client-side pipeline runner),
                       roleplay.ts, readBetweenTheLines.ts, testcases.ts, stages.ts
   research/service.ts research abstraction (demo fallback + live-provider seam)
   store/              zustand store (theme, history, settings — persisted)
@@ -50,14 +55,14 @@ components/
 ```
 
 - **Agent logic is isolated from UI.** Every screen calls into `lib/agent/*`, never re-implements reasoning inline.
-- **Research is a clean seam.** `lib/research/service.ts` is the only place that would ever call an external search API — it's imported exclusively by the server-side `/api/research` route, never by client code, so a key is never exposed to the browser.
+- **Research is a clean seam.** `lib/research/service.ts` is the only place that would ever call an external search API. As shipped (a static export with no server), `runAgentTurn` calls it directly client-side, so a real `SEARCH_API_KEY` is never reachable there — that's intentional, since a static site has nowhere to keep a secret. Deploying on a real Node server (Vercel, etc.) instead is a small change: add back a thin `app/api/research/route.ts` that imports `runResearch`, and call it via `fetch` from the client so the key stays server-side.
 - **No fake features.** In demo mode, research results are explicitly labeled `DEMO MODE` and use illustrative placeholder sources — the product never claims to have searched the web when it hasn't.
 
 ## Connecting real services (optional)
 
 Copy `.env.example` to `.env.local`:
 
-- `SEARCH_API_KEY` / `SEARCH_API_URL` — wire up a real web-search provider in `lib/research/service.ts::liveResearch`. Without it, research falls back to the labeled demo layer automatically (and also falls back gracefully if a live call fails).
+- `SEARCH_API_KEY` / `SEARCH_API_URL` — only meaningful if you also move research behind a server route (see above); a static export has no server to read this from. Without it, research falls back to the labeled demo layer automatically.
 - `AI_API_KEY` — reserved for swapping the heuristic classifier in `lib/agent/engine.ts` for a real model call. The heuristic engine works fully without it.
 
 ## Notes on scope

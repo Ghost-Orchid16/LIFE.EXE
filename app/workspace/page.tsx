@@ -16,6 +16,7 @@ import ScamSensePanel from "@/components/workspace/ScamSensePanel";
 import ReadBetweenLinesPanel from "@/components/workspace/ReadBetweenLinesPanel";
 import OutcomePicker from "@/components/workspace/OutcomePicker";
 import { ENGINE_STAGES } from "@/lib/agent/stages";
+import { runAgentTurn } from "@/lib/agent/runAgentTurn";
 import { useLifeStore } from "@/lib/store/useLifeStore";
 import type { AgentTurn, DecisionFrame, OutcomeGoal, Strategy } from "@/lib/types";
 
@@ -63,14 +64,8 @@ export default function WorkspacePage() {
     }, 320);
 
     try {
-      const res = await fetch("/api/agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input: text }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "The LIFE ENGINE lost connection. Try again.");
-      const turn: AgentTurn = data.turn;
+      const minDelay = new Promise((resolve) => setTimeout(resolve, 1800));
+      const [turn] = await Promise.all([runAgentTurn(text), minDelay]);
       setTurns((t) => [...t, turn]);
       addHistoryEntry({ title: text.slice(0, 80), category: turn.classification.primaryCategory, type: "situation" });
       bumpCounter("situationsExplored");
