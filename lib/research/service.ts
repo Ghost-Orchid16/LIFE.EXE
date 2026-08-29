@@ -1,18 +1,13 @@
 import type { ResearchResult, ResearchSource } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
-// Research service abstraction.
+// Research service abstraction (server-side only).
 //
 // This module is the single seam between LIFE.EXE and any external search/web
-// API — everything that would call a live provider lives behind
-// `liveResearch` below. LIFE.EXE currently ships as a static export (see
-// next.config.ts) with no server, so this runs client-side and
-// `hasLiveSearchProvider()` is always false there (no server means no place
-// to keep SEARCH_API_KEY secret, so a static deployment intentionally never
-// attempts a live call). If this app is instead deployed on a Node server
-// (e.g. Vercel), reintroduce a thin API route that imports `runResearch` and
-// call it via fetch from the client instead of importing this module
-// directly — that keeps a real SEARCH_API_KEY server-side only.
+// API. Nothing here ever runs in the browser — it is only imported from
+// app/api/research/route.ts. To connect a real provider:
+//   1. Set SEARCH_API_KEY (and optionally SEARCH_API_URL) in your environment.
+//   2. Implement `liveResearch` below to call that provider.
 // Until a key is present, `runResearch` transparently falls back to a
 // realistic mock so the UI and workflow are fully exercised in demo mode.
 // The caller always receives an honest `mode: "demo" | "live"` flag — the
@@ -25,8 +20,8 @@ function hasLiveSearchProvider(): boolean {
 
 async function liveResearch(query: string): Promise<ResearchResult> {
   // Placeholder for a real provider integration (e.g. Brave Search, Tavily,
-  // Bing, SerpAPI). Kept isolated so swapping providers never touches the
-  // rest of the app — only relevant once this runs behind a server route.
+  // Bing, SerpAPI). Kept isolated so swapping providers never touches
+  // frontend code or the /api/research contract.
   const apiKey = process.env.SEARCH_API_KEY as string;
   const apiUrl = process.env.SEARCH_API_URL ?? "https://api.example-search-provider.com/v1/search";
 
