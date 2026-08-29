@@ -2,6 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { useSyncExternalStore } from "react";
+import { useLifeStore } from "@/lib/store/useLifeStore";
+import { THEME_PREVIEW } from "@/lib/themes";
 
 const LifeCoreScene = dynamic(() => import("./LifeCoreScene"), { ssr: false });
 
@@ -48,6 +50,8 @@ export default function LifeCore() {
   const isClient = useIsClient();
   const reduced = useReducedMotion();
   const perfOk = usePerformanceGate();
+  const theme = useLifeStore((s) => s.theme);
+  const colors = THEME_PREVIEW[theme];
 
   if (!isClient) return <div className="h-full w-full" aria-hidden="true" />;
 
@@ -67,7 +71,7 @@ export default function LifeCore() {
 
   return (
     <div className="h-full w-full" aria-hidden="true">
-      <LifeCoreScene />
+      <LifeCoreScene accent={colors.accent} accent2={colors.accent2} />
     </div>
   );
 }
