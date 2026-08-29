@@ -9,6 +9,9 @@ export const CATEGORY_KEYWORDS: Record<Category, string[]> = {
   dating: [
     "crush", "date", "dating", "flirt", "asked me out", "ask her out", "ask him out",
     "romantic", "confess my feelings", "tinder", "hinge", "bumble", "swipe",
+    "interested in me", "into me", "likes me", "like me back", "leads me on",
+    "leading me on", "mixed signals", "feelings for me", "into her", "into him",
+    "she likes", "he likes", "does she like", "does he like", "not interested in me",
   ],
   relationships: [
     "boyfriend", "girlfriend", "partner", "relationship", "breakup", "break up",

@@ -235,8 +235,38 @@ function summarize(input: string, primary: Category, secondary?: Category): stri
 // Strategy generation
 // ---------------------------------------------------------------------------
 
-const STRATEGY_TEMPLATES: Record<string, (input: string, category: Category) => Strategy[]> = {
-  default: (_input, category) => [
+// Situations fall into a few genuinely different shapes, and one universal
+// template can't serve all of them — "Set a Boundary" makes no sense for "how
+// do I know if this person is into me" (there's no one to set a boundary
+// with). Each category maps to the family whose strategies actually apply.
+type StrategyFamily = "boundary" | "signal" | "decision";
+
+const FAMILY_BY_CATEGORY: Record<Category, StrategyFamily> = {
+  relationships: "boundary",
+  dating: "signal",
+  friendship: "signal",
+  family: "boundary",
+  social: "signal",
+  communication: "boundary",
+  conflict: "boundary",
+  career: "decision",
+  education: "decision",
+  money: "decision",
+  purchases: "decision",
+  work: "boundary",
+  decision: "decision",
+  productivity: "decision",
+  transition: "decision",
+  travel: "decision",
+  technology: "decision",
+  current_events: "decision",
+  scam: "boundary",
+  other: "decision",
+};
+
+const STRATEGY_TEMPLATES: Record<StrategyFamily, (input: string, category: Category) => Strategy[]> = {
+  // There's another person and something needs to change between you two.
+  boundary: (_input, category) => [
     {
       id: "keep-the-peace",
       title: "Keep the Peace",
@@ -268,19 +298,97 @@ const STRATEGY_TEMPLATES: Record<string, (input: string, category: Category) => 
       exampleAction: "Lead with the core message in the first sentence, then explain.",
     },
   ],
+  // You're trying to read someone else's behavior or intentions, not confront them.
+  signal: (_input, category) => [
+    {
+      id: "watch-the-pattern",
+      title: "Watch the Pattern, Not the Moment",
+      tag: "01 — WAIT & OBSERVE",
+      approach: "Judge this by what's consistent over time, not by any single interaction.",
+      advantages: ["Avoids overreacting to one data point", "Costs nothing to try", "The picture often clarifies on its own"],
+      risks: ["Can drift into overthinking without a time limit", "Doesn't resolve the uncertainty quickly"],
+      whenItMakesSense: "When you've only got one or two signals so far and it's too early to be sure.",
+      exampleAction: "Give it two or three more real interactions before drawing a conclusion either way.",
+    },
+    {
+      id: "ask-directly",
+      title: "Ask Directly",
+      tag: "02 — REDUCE AMBIGUITY",
+      approach: "Name what you're noticing and ask, instead of guessing at what it means.",
+      advantages: ["Ends the guessing fastest", "Shows confidence", "Gives you a real answer instead of a theory"],
+      risks: ["Requires being willing to hear 'no'", "Can feel exposing"],
+      whenItMakesSense: "When the uncertainty itself is costing you more than a direct answer would.",
+      exampleAction: `Say something like: "I've noticed ${category === "dating" ? "things feel a bit one-sided lately" : "a shift recently"} — is everything okay on your end?"`,
+    },
+    {
+      id: "let-it-answer-itself",
+      title: "Let It Answer Itself",
+      tag: "03 — STEP BACK",
+      approach: "Stop initiating for a bit and see what they do with the space.",
+      advantages: ["Low effort", "Tells you a lot about their actual level of interest", "Protects your energy"],
+      risks: ["Can feel like a game if that's not your style", "Won't work if they're just as passive as you"],
+      whenItMakesSense: "When you've been the one carrying the effort and want to see it reciprocated before investing more.",
+      exampleAction: "Go quiet for a week or two and notice whether they reach out first.",
+    },
+  ],
+  // There's no other person to negotiate with — it's a choice to make.
+  decision: (_input, category) => [
+    {
+      id: "practical-pick",
+      title: "Go With the Practical Pick",
+      tag: "01 — LOWEST RISK",
+      approach: "Choose whichever option is cheaper, easier to reverse, or lower-stakes if you're wrong.",
+      advantages: ["Limits downside", "Easy to justify to yourself later", "Fast to act on"],
+      risks: ["Might not be the option you actually want more", "Can default to 'safe' out of avoidance"],
+      whenItMakesSense: "When the options are genuinely close and getting it slightly wrong isn't costly.",
+      exampleAction: "List what it costs you if each option turns out to be the wrong call — pick the cheaper mistake.",
+    },
+    {
+      id: "one-more-fact",
+      title: "Get One More Data Point",
+      tag: "02 — REDUCE UNCERTAINTY",
+      approach: "Identify the single fact that would actually tip your decision, and go find it before choosing.",
+      advantages: ["Turns a vague choice into an informed one", "Prevents second-guessing later"],
+      risks: ["Can become an excuse to keep delaying", "Not every decision has a clean missing fact"],
+      whenItMakesSense: "When you're torn mainly because something concrete is still unknown.",
+      exampleAction: "Name the exact fact you're missing, then set yourself a deadline to find it or decide without it.",
+    },
+    {
+      id: "trust-your-gut",
+      title: "Trust Your Gut Read",
+      tag: "03 — DECIDE & MOVE",
+      approach: "If the options are close on paper, stop analyzing and go with your instinct.",
+      advantages: ["Ends decision fatigue", "You usually already know", "Fastest path forward"],
+      risks: ["Feels less 'rational'", "Harder to justify if it goes wrong"],
+      whenItMakesSense:
+        category === "purchases"
+          ? "When the specs are close enough that either choice is fine."
+          : "When you've been going back and forth without new information changing your mind.",
+      exampleAction: "Pick the one you found yourself leaning toward before you started overanalyzing it.",
+    },
+  ],
+};
+
+const RECOMMENDED_BY_FAMILY: Record<StrategyFamily, (c: ClassificationResult) => string> = {
+  boundary: (c) => (c.emotional.tone === "urgent" || c.emotional.tone === "frustrated" ? "be-direct" : "set-a-boundary"),
+  signal: (c) =>
+    c.emotional.tone === "frustrated" || c.emotional.tone === "urgent" ? "ask-directly" : "watch-the-pattern",
+  decision: (c) =>
+    c.needsResearch || c.emotional.tone === "conflicted"
+      ? "one-more-fact"
+      : c.emotional.tone === "anxious"
+      ? "trust-your-gut"
+      : "practical-pick",
 };
 
 export function generateStrategies(input: string, classification: ClassificationResult): Strategy[] {
-  const gen = STRATEGY_TEMPLATES[classification.primaryCategory] ?? STRATEGY_TEMPLATES.default;
-  const strategies = gen(input, classification.primaryCategory);
+  const family = FAMILY_BY_CATEGORY[classification.primaryCategory] ?? "decision";
+  const strategies = STRATEGY_TEMPLATES[family](input, classification.primaryCategory);
 
   // Pick one strategy to actually recommend — "give me the real answer" mode
   // (and the default response) should point somewhere, not just lay out three
   // equal options and shrug.
-  const recommendedId =
-    classification.emotional.tone === "urgent" || classification.emotional.tone === "frustrated"
-      ? "be-direct"
-      : "set-a-boundary";
+  const recommendedId = RECOMMENDED_BY_FAMILY[family](classification);
   return strategies.map((s) => (s.id === recommendedId ? { ...s, recommended: true } : s));
 }
 
