@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  classifySituation,
-  generateStrategies,
-  buildDecisionFrame,
-  analyzeScam,
-  buildRecoveryPlan,
-  nextStepFor,
-} from "@/lib/agent/engine";
-import { runResearch } from "@/lib/research/service";
+import { hasGeminiKey, runGeminiTurn } from "@/lib/agent/gemini";
+import { buildHeuristicTurn } from "@/lib/agent/heuristicTurn";
 import type { AgentTurn } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
@@ -22,29 +15,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "That's a lot — try trimming it to the essentials (under 4000 characters)." }, { status: 400 });
     }
 
-    const classification = classifySituation(input);
-
-    const turn: AgentTurn = {
-      id: `turn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      createdAt: Date.now(),
-      userInput: input,
-      classification,
-      nextStep: nextStepFor(classification),
-    };
-
-    if (classification.isScamLike) {
-      turn.scam = analyzeScam(input);
-    } else if (classification.isRecoveryMode) {
-      turn.recovery = buildRecoveryPlan(input, classification);
-    } else {
-      turn.strategies = generateStrategies(input, classification);
-      if (classification.primaryCategory === "decision") {
-        turn.decisionFrame = buildDecisionFrame(input, classification);
+    let turn: AgentTurn;
+    if (hasGeminiKey()) {
+      try {
+        turn = await runGeminiTurn(input);
+      } catch (err) {
+        console.error("Gemini call failed, falling back to the heuristic engine:", err);
+        turn = await buildHeuristicTurn(input);
       }
-    }
-
-    if (classification.needsResearch) {
-      turn.research = await runResearch(input);
+    } else {
+      turn = await buildHeuristicTurn(input);
     }
 
     return NextResponse.json({ turn });
