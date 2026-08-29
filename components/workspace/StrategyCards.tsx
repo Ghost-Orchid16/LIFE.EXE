@@ -12,7 +12,7 @@ export default function StrategyCards({
   strategies: Strategy[];
   onPractice?: (strategy: Strategy) => void;
 }) {
-  const [openId, setOpenId] = useState<string | null>(strategies[0]?.id ?? null);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   return (
     <div className="flex flex-col gap-3">

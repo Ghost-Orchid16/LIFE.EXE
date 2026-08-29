@@ -5,7 +5,12 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { MeshDistortMaterial, Icosahedron, Points, PointMaterial } from "@react-three/drei";
 import * as THREE from "three";
 
-function Core() {
+interface SceneColors {
+  accent: string;
+  accent2: string;
+}
+
+function Core({ accent, accent2 }: SceneColors) {
   const mesh = useRef<THREE.Mesh>(null);
   const { pointer } = useThree();
 
@@ -19,20 +24,20 @@ function Core() {
   return (
     <Icosahedron ref={mesh} args={[1.6, 6]}>
       <MeshDistortMaterial
-        color="#8ea2ff"
+        color={accent}
         attach="material"
         distort={0.35}
         speed={1.4}
         roughness={0.15}
         metalness={0.4}
-        emissive="#6f7dff"
+        emissive={accent2}
         emissiveIntensity={0.35}
       />
     </Icosahedron>
   );
 }
 
-function OrbitNodes() {
+function OrbitNodes({ accent, accent2 }: SceneColors) {
   const group = useRef<THREE.Group>(null);
   const positions = useMemo(() => {
     const arr: [number, number, number][] = [];
@@ -52,16 +57,15 @@ function OrbitNodes() {
 
   return (
     <group ref={group}>
-      {positions.map((p, i) => (
-        <mesh key={i} position={p}>
-          <sphereGeometry args={[0.045, 12, 12]} />
-          <meshStandardMaterial
-            color={i % 2 === 0 ? "#c9a3ff" : "#8ea2ff"}
-            emissive={i % 2 === 0 ? "#c9a3ff" : "#8ea2ff"}
-            emissiveIntensity={0.8}
-          />
-        </mesh>
-      ))}
+      {positions.map((p, i) => {
+        const color = i % 2 === 0 ? accent2 : accent;
+        return (
+          <mesh key={i} position={p}>
+            <sphereGeometry args={[0.045, 12, 12]} />
+            <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.8} />
+          </mesh>
+        );
+      })}
     </group>
   );
 }
@@ -72,7 +76,7 @@ function hash(seed: number): number {
   return x - Math.floor(x);
 }
 
-function Dust() {
+function Dust({ accent }: { accent: string }) {
   const positions = useMemo(() => {
     const count = 400;
     const arr = new Float32Array(count * 3);
@@ -95,12 +99,12 @@ function Dust() {
 
   return (
     <Points ref={ref} positions={positions} stride={3}>
-      <PointMaterial transparent color="#9fb0ff" size={0.02} sizeAttenuation depthWrite={false} opacity={0.5} />
+      <PointMaterial transparent color={accent} size={0.02} sizeAttenuation depthWrite={false} opacity={0.5} />
     </Points>
   );
 }
 
-export default function LifeCoreScene() {
+export default function LifeCoreScene({ accent = "#8ea2ff", accent2 = "#c9a3ff" }: Partial<SceneColors>) {
   return (
     <Canvas
       camera={{ position: [0, 0, 6.2], fov: 45 }}
@@ -108,11 +112,11 @@ export default function LifeCoreScene() {
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
     >
       <ambientLight intensity={0.5} />
-      <pointLight position={[4, 4, 4]} intensity={40} color="#8ea2ff" distance={20} />
-      <pointLight position={[-4, -2, -3]} intensity={25} color="#c9a3ff" distance={20} />
-      <Core />
-      <OrbitNodes />
-      <Dust />
+      <pointLight position={[4, 4, 4]} intensity={40} color={accent} distance={20} />
+      <pointLight position={[-4, -2, -3]} intensity={25} color={accent2} distance={20} />
+      <Core accent={accent} accent2={accent2} />
+      <OrbitNodes accent={accent} accent2={accent2} />
+      <Dust accent={accent} />
     </Canvas>
   );
 }

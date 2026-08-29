@@ -138,6 +138,40 @@
   --letter-tighten: -0.02em;
 }
 
+/* ----------------------------------------------------------------- OCEAN */
+:root[data-theme="ocean"] {
+  --bg: #030c14;
+  --bg-elevated: #06141f;
+  --fg: #eaf6fb;
+  --fg-muted: #7fa3b3;
+  --accent: #4fd8e8;
+  --accent-2: #3f8fd6;
+  --accent-rgb: 79, 216, 232;
+  --accent-2-rgb: 63, 143, 214;
+  --border: rgba(140, 220, 235, 0.12);
+  --surface-rgb: 10, 32, 45;
+  --radius-card: 24px;
+  --glow: 0 0 70px rgba(79, 216, 232, 0.2);
+  --letter-tighten: -0.01em;
+}
+
+/* ---------------------------------------------------------------- SUNSET */
+:root[data-theme="sunset"] {
+  --bg: #160a0e;
+  --bg-elevated: #221019;
+  --fg: #fdf1e9;
+  --fg-muted: #c69a92;
+  --accent: #ff9a5a;
+  --accent-2: #ff6b9d;
+  --accent-rgb: 255, 154, 90;
+  --accent-2-rgb: 255, 107, 157;
+  --border: rgba(255, 190, 150, 0.14);
+  --surface-rgb: 60, 30, 30;
+  --radius-card: 26px;
+  --glow: 0 0 90px rgba(255, 154, 90, 0.25);
+  --letter-tighten: -0.01em;
+}
+
 * {
   border-color: var(--border);
 }
@@ -266,6 +300,46 @@ body {
   backdrop-filter: blur(2px);
 }
 
+/* Ocean: rising bubbles + slow drifting caustic light, deep blue depth */
+:root[data-theme="ocean"] .life-scene {
+  background: radial-gradient(ellipse 120% 80% at 50% 100%, #0a2636 0%, var(--bg) 70%);
+}
+:root[data-theme="ocean"] .life-scene::before {
+  background-image:
+    radial-gradient(3px 3px at 10% 95%, rgba(200,240,250,0.5) 0, transparent 100%),
+    radial-gradient(2px 2px at 30% 98%, rgba(200,240,250,0.4) 0, transparent 100%),
+    radial-gradient(4px 4px at 55% 96%, rgba(200,240,250,0.45) 0, transparent 100%),
+    radial-gradient(2px 2px at 75% 99%, rgba(200,240,250,0.4) 0, transparent 100%),
+    radial-gradient(3px 3px at 90% 97%, rgba(200,240,250,0.5) 0, transparent 100%),
+    radial-gradient(2px 2px at 20% 99%, rgba(200,240,250,0.35) 0, transparent 100%),
+    radial-gradient(3px 3px at 65% 98%, rgba(200,240,250,0.4) 0, transparent 100%);
+  background-size: 100% 100%;
+  animation: bubbles-rise 16s linear infinite;
+}
+:root[data-theme="ocean"] .life-scene::after {
+  background:
+    radial-gradient(ellipse 70% 45% at 25% 15%, rgba(var(--accent-rgb), 0.14), transparent 60%),
+    radial-gradient(ellipse 55% 40% at 80% 35%, rgba(var(--accent-2-rgb), 0.12), transparent 65%);
+  filter: blur(30px);
+  animation: caustic-drift 20s ease-in-out infinite alternate;
+}
+
+/* Sunset: warm horizon glow with a slow-pulsing sun disc low in the frame */
+:root[data-theme="sunset"] .life-scene {
+  background: linear-gradient(180deg, var(--bg) 0%, #2a1220 55%, #180a10 100%);
+}
+:root[data-theme="sunset"] .life-scene::before {
+  background: radial-gradient(circle at 50% 82%, rgba(255, 170, 110, 0.55), rgba(255, 107, 157, 0.18) 35%, transparent 60%);
+  animation: sun-pulse 12s ease-in-out infinite alternate;
+}
+:root[data-theme="sunset"] .life-scene::after {
+  background:
+    radial-gradient(ellipse 60% 30% at 20% 20%, rgba(var(--accent-2-rgb), 0.12), transparent 60%),
+    radial-gradient(ellipse 50% 25% at 85% 10%, rgba(var(--accent-rgb), 0.1), transparent 60%);
+  filter: blur(40px);
+  animation: float-slow 24s ease-in-out infinite alternate;
+}
+
 @keyframes drift {
   from { transform: translate3d(0,0,0); }
   to { transform: translate3d(-300px, -200px, 0); }
@@ -277,6 +351,18 @@ body {
 @keyframes float-slow {
   from { transform: translate3d(0,0,0) scale(1); }
   to { transform: translate3d(30px,-20px,0) scale(1.05); }
+}
+@keyframes bubbles-rise {
+  from { transform: translateY(0); }
+  to { transform: translateY(-100%); }
+}
+@keyframes caustic-drift {
+  from { opacity: 0.75; transform: translate3d(-15px, 10px, 0) scale(1); }
+  to { opacity: 1; transform: translate3d(15px, -15px, 0) scale(1.06); }
+}
+@keyframes sun-pulse {
+  from { opacity: 0.75; transform: scale(1); }
+  to { opacity: 1; transform: scale(1.1); }
 }
 
 /* Reusable surface primitives */

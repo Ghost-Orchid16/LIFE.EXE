@@ -15,6 +15,7 @@ import {
   RESEARCH_TRIGGER_KEYWORDS,
   RECOVERY_KEYWORDS,
   EMOTION_WORDS,
+  WEAK_SIGNAL_WEIGHTS,
 } from "@/lib/agent/keywords";
 
 // ---------------------------------------------------------------------------
@@ -33,13 +34,33 @@ function norm(text: string): string {
   return text.toLowerCase();
 }
 
+// Single-word keywords need word-boundary matching, not plain substring —
+// otherwise short generic words false-positive inside unrelated words (e.g.
+// the "rent" keyword matching inside "cuRRENT" or "paRENTs"). Multi-word
+// phrases are specific enough that plain substring matching is safe and
+// cheaper. Compiled lazily and cached since CATEGORY_KEYWORDS is static.
+const wordBoundaryRegexCache = new Map<string, RegExp>();
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function matchesKeyword(n: string, kw: string): boolean {
+  if (kw.includes(" ")) return n.includes(kw);
+  let re = wordBoundaryRegexCache.get(kw);
+  if (!re) {
+    re = new RegExp(`\\b${escapeRegExp(kw)}\\b`);
+    wordBoundaryRegexCache.set(kw, re);
+  }
+  return re.test(n);
+}
+
 function scoreCategories(input: string): Record<Category, number> {
   const n = norm(input);
   const scores = {} as Record<Category, number>;
   (Object.keys(CATEGORY_KEYWORDS) as Category[]).forEach((cat) => {
     let score = 0;
     for (const kw of CATEGORY_KEYWORDS[cat]) {
-      if (n.includes(kw)) score += kw.split(" ").length >= 2 ? 2 : 1;
+      if (!matchesKeyword(n, kw)) continue;
+      score += WEAK_SIGNAL_WEIGHTS[kw] ?? (kw.split(" ").length >= 2 ? 2 : 1);
     }
     scores[cat] = score;
   });
@@ -52,7 +73,7 @@ function detectEmotion(input: string): EmotionalContext {
   let bestScore = 0;
   (Object.keys(EMOTION_WORDS) as EmotionalContext["tone"][]).forEach((tone) => {
     const words = EMOTION_WORDS[tone];
-    const score = words.filter((w) => n.includes(w)).length;
+    const score = words.filter((w) => matchesKeyword(n, w)).length;
     if (score > bestScore) {
       bestScore = score;
       best = tone;
@@ -61,7 +82,7 @@ function detectEmotion(input: string): EmotionalContext {
   const exclam = (input.match(/!/g) || []).length;
   const intensity = Math.min(1, bestScore * 0.25 + exclam * 0.1 + (input.length > 400 ? 0.2 : 0));
   const highStakesWords = ["fired", "expelled", "breakup", "divorce", "diagnosed", "arrested", "eviction", "suicidal", "hospital"];
-  const stakes: EmotionalContext["stakes"] = highStakesWords.some((w) => n.includes(w))
+  const stakes: EmotionalContext["stakes"] = highStakesWords.some((w) => matchesKeyword(n, w))
     ? "high"
     : bestScore >= 2
     ? "medium"
@@ -71,7 +92,7 @@ function detectEmotion(input: string): EmotionalContext {
 
 function detectResearchNeed(input: string, categories: Category[]): { needs: boolean; reason?: string } {
   const n = norm(input);
-  const hasTrigger = RESEARCH_TRIGGER_KEYWORDS.some((kw) => n.includes(kw));
+  const hasTrigger = RESEARCH_TRIGGER_KEYWORDS.some((kw) => matchesKeyword(n, kw));
   const isFactualCategory = categories.some((c) =>
     ["purchases", "current_events", "technology", "education", "travel", "money"].includes(c)
   );
@@ -90,7 +111,7 @@ function detectHighStakesSafety(input: string): boolean {
     "suicidal", "want to die", "self harm", "hospital", "diagnosed", "legal action",
     "lawsuit", "arrested", "medical emergency", "abuse", "domestic violence",
   ];
-  return flags.some((f) => n.includes(f));
+  return flags.some((f) => matchesKeyword(n, f));
 }
 
 function buildClarifyingQuestions(primary: Category, input: string): string[] {
@@ -132,8 +153,14 @@ export function classifySituation(input: string): ClassificationResult {
 
   const categories = ranked.length > 0 ? ranked.slice(0, 3).map(([c]) => c) : (["other"] as Category[]);
   const primaryCategory = categories[0];
+  // A secondary intent is only meaningful if it carries real signal of its own
+  // (not just a leftover from a near-zero tie) and isn't just the same idea
+  // twice (e.g. "decision" alongside "purchases" is fine; both firing from
+  // the same one phrase isn't a second distinct intent).
+  const secondaryCategory =
+    categories.length > 1 && ranked[1][1] > 0 ? categories[1] : undefined;
   const isScamLike = categories.includes("scam") || (scores.scam ?? 0) >= 2;
-  const isRecoveryMode = RECOVERY_KEYWORDS.some((k) => norm(input).includes(k));
+  const isRecoveryMode = RECOVERY_KEYWORDS.some((k) => matchesKeyword(norm(input), k));
   const emotional = detectEmotion(input);
   const research = detectResearchNeed(input, categories);
   const isHighStakes = detectHighStakesSafety(input) || emotional.stakes === "high";
@@ -142,18 +169,23 @@ export function classifySituation(input: string): ClassificationResult {
 
   const whatWeKnow: string[] = [];
   const whatWeDontKnow: string[] = [];
-  whatWeKnow.push(`You're dealing with something involving ${categories.map((c) => c.replace("_", " ")).join(" + ")}.`);
+  whatWeKnow.push(
+    secondaryCategory
+      ? `Primarily ${primaryCategory.replace("_", " ")}, with ${secondaryCategory.replace("_", " ")} tangled into it.`
+      : `You're dealing with something involving ${primaryCategory.replace("_", " ")}.`
+  );
   if (emotional.tone !== "calm") {
     whatWeKnow.push(`There's a ${emotional.tone} undertone to how you described it.`);
   }
   whatWeDontKnow.push("The full context of the other people involved, beyond what you've shared.");
   if (research.needs) whatWeDontKnow.push("Any current, real-world facts that haven't been checked yet.");
 
-  const summary = summarize(input, primaryCategory);
+  const summary = summarize(input, primaryCategory, secondaryCategory);
 
   return {
     categories,
     primaryCategory,
+    secondaryCategory,
     emotional,
     needsResearch: research.needs,
     researchReason: research.reason,
@@ -168,32 +200,35 @@ export function classifySituation(input: string): ClassificationResult {
   };
 }
 
-function summarize(input: string, category: Category): string {
+const CATEGORY_LABELS: Record<Category, string> = {
+  dating: "a dating / romantic-interest situation",
+  relationships: "a relationship situation",
+  friendship: "a friendship situation",
+  family: "a family situation",
+  social: "a social situation",
+  communication: "a conversation you need to have",
+  conflict: "a boundary being crossed",
+  career: "a career decision",
+  education: "an education-related decision",
+  money: "a money question",
+  purchases: "a purchase decision",
+  work: "a workplace situation",
+  decision: "a decision between options",
+  productivity: "a productivity / focus challenge",
+  transition: "a life transition",
+  travel: "a travel question",
+  technology: "a technology question",
+  current_events: "something tied to current information",
+  scam: "a potentially suspicious message",
+  other: "a situation that doesn't fit a neat category",
+};
+
+function summarize(input: string, primary: Category, secondary?: Category): string {
   const trimmed = input.trim();
   const short = trimmed.length > 140 ? trimmed.slice(0, 137) + "…" : trimmed;
-  const labels: Record<Category, string> = {
-    dating: "a dating / romantic-interest situation",
-    relationships: "a relationship situation",
-    friendship: "a friendship situation",
-    family: "a family situation",
-    social: "a social situation",
-    communication: "a conversation you need to have",
-    conflict: "a conflict",
-    career: "a career decision",
-    education: "an education-related decision",
-    money: "a money question",
-    purchases: "a purchase decision",
-    work: "a workplace situation",
-    decision: "a decision between options",
-    productivity: "a productivity / focus challenge",
-    transition: "a life transition",
-    travel: "a travel question",
-    technology: "a technology question",
-    current_events: "something tied to current information",
-    scam: "a potentially suspicious message",
-    other: "a situation that doesn't fit a neat category",
-  };
-  return `This reads as ${labels[category]}: "${short}"`;
+  const primaryLine = `This is primarily ${CATEGORY_LABELS[primary]}.`;
+  const secondaryLine = secondary ? ` There's also ${CATEGORY_LABELS[secondary]} riding on it.` : "";
+  return `${primaryLine}${secondaryLine} ("${short}")`;
 }
 
 // ---------------------------------------------------------------------------
@@ -237,7 +272,16 @@ const STRATEGY_TEMPLATES: Record<string, (input: string, category: Category) => 
 
 export function generateStrategies(input: string, classification: ClassificationResult): Strategy[] {
   const gen = STRATEGY_TEMPLATES[classification.primaryCategory] ?? STRATEGY_TEMPLATES.default;
-  return gen(input, classification.primaryCategory);
+  const strategies = gen(input, classification.primaryCategory);
+
+  // Pick one strategy to actually recommend — "give me the real answer" mode
+  // (and the default response) should point somewhere, not just lay out three
+  // equal options and shrug.
+  const recommendedId =
+    classification.emotional.tone === "urgent" || classification.emotional.tone === "frustrated"
+      ? "be-direct"
+      : "set-a-boundary";
+  return strategies.map((s) => (s.id === recommendedId ? { ...s, recommended: true } : s));
 }
 
 // ---------------------------------------------------------------------------
@@ -304,13 +348,13 @@ export function whatIfScenario(option: DecisionOption): string {
 // ---------------------------------------------------------------------------
 
 const SCAM_SIGNAL_DEFS: { id: string; label: string; weight: number; test: (n: string) => boolean; explanation: string }[] = [
-  { id: "urgency", label: "Artificial urgency", weight: 2, test: (n) => /urgent|immediately|right now|expires today|act now|final notice/.test(n), explanation: "Pressure to act fast is a classic manipulation tactic that prevents careful thinking." },
+  { id: "urgency", label: "Artificial urgency", weight: 2, test: (n) => /urgent|immediately|right now|expires today|act now|final notice|within \d+ minutes|pay within|minutes to (pay|respond|verify|confirm)/.test(n), explanation: "Pressure to act fast is a classic manipulation tactic that prevents careful thinking." },
   { id: "otp", label: "Requests OTP / verification code", weight: 4, test: (n) => /otp|one[- ]time password|verification code|security code/.test(n), explanation: "No legitimate service ever needs you to share a one-time code with someone else." },
-  { id: "payment", label: "Unusual payment request", weight: 3, test: (n) => /gift card|wire transfer|crypto|bitcoin|western union|advance fee|processing fee|send money/.test(n), explanation: "Requests for gift cards, crypto, or wire transfers are hard to trace and reverse — a scammer favorite." },
+  { id: "payment", label: "Unusual payment request", weight: 3, test: (n) => /gift card|wire transfer|crypto|bitcoin|western union|advance fee|processing fee|send money|payment link|link to pay|make (the |a )?payment/.test(n), explanation: "Unexpected payment requests — especially via a link or an untraceable method — are a scammer favorite." },
   { id: "impersonation", label: "Possible impersonation", weight: 3, test: (n) => /bank|irs|tax|government|amazon|microsoft|support team|official/.test(n), explanation: "Messages claiming to be from an authority or company can be spoofed convincingly." },
   { id: "credentials", label: "Requests credentials", weight: 3, test: (n) => /password|login|verify your account|confirm your identity|social security/.test(n), explanation: "Real organizations don't ask you to confirm passwords or full ID numbers via message." },
   { id: "link", label: "Suspicious link", weight: 2, test: (n) => /https?:\/\/|bit\.ly|click here|click this link/.test(n), explanation: "Shortened or unfamiliar links can hide malicious destinations." },
-  { id: "too_good", label: "Unrealistic promise", weight: 3, test: (n) => /won|winner|lottery|prize|guaranteed return|free money|easy money/.test(n), explanation: "Offers that sound too good to be true almost always are." },
+  { id: "too_good", label: "Unrealistic promise", weight: 3, test: (n) => /\byou('ve| have)? won\b|winner|lottery|\bprize\b|guaranteed return|free money|easy money/.test(n), explanation: "Offers that sound too good to be true almost always are." },
   { id: "job_offer", label: "Unsolicited job/income offer", weight: 2, test: (n) => /work from home|earn \$|no experience needed|hiring immediately|be your own boss/.test(n), explanation: "Vague, high-pay, low-effort job offers are a common scam pattern." },
 ];
 

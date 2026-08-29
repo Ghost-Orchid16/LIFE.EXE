@@ -59,6 +59,7 @@ export interface EmotionalContext {
 export interface ClassificationResult {
   categories: Category[];
   primaryCategory: Category;
+  secondaryCategory?: Category;
   emotional: EmotionalContext;
   needsResearch: boolean;
   researchReason?: string;
@@ -81,6 +82,7 @@ export interface Strategy {
   risks: string[];
   whenItMakesSense: string;
   exampleAction: string;
+  recommended?: boolean;
 }
 
 export interface ResearchSource {
@@ -208,4 +210,6 @@ export type ThemeId =
   | "ambient"
   | "mono"
   | "organic"
-  | "glass";
+  | "glass"
+  | "ocean"
+  | "sunset";

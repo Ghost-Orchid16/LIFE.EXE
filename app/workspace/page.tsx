@@ -8,7 +8,7 @@ import SituationInput, { PENDING_KEY } from "@/components/workspace/SituationInp
 import LifeEngineProgress from "@/components/workspace/LifeEngineProgress";
 import ContextPanel from "@/components/workspace/ContextPanel";
 import ResponseCard from "@/components/workspace/ResponseCard";
-import FollowUpBar from "@/components/workspace/FollowUpBar";
+import LifeComposer from "@/components/workspace/LifeComposer";
 import Modal from "@/components/ui/Modal";
 import DecisionSimulatorPanel from "@/components/workspace/DecisionSimulatorPanel";
 import RoleplayPanel from "@/components/workspace/RoleplayPanel";
@@ -66,10 +66,10 @@ export default function WorkspacePage() {
       const res = await fetch("/api/agent", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input: text }),
+        body: JSON.stringify({ input: text, noSugarcoating }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error ?? "The LIFE ENGINE lost connection. Try again.");
+      if (!res.ok) throw new Error(data?.error ?? "LIFE.EXE hit a temporary snag. Try again.");
       const turn: AgentTurn = data.turn;
       setTurns((t) => [...t, turn]);
       addHistoryEntry({ title: text.slice(0, 80), category: turn.classification.primaryCategory, type: "situation" });
@@ -77,13 +77,13 @@ export default function WorkspacePage() {
       completeOnboarding();
       setPendingRetry(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "The LIFE ENGINE lost connection. Try again.");
+      setError(e instanceof Error ? e.message : "LIFE.EXE hit a temporary snag. Try again.");
       setPendingRetry(text);
     } finally {
       if (stageTimer.current) clearInterval(stageTimer.current);
       setProcessing(false);
     }
-  }, [addHistoryEntry, bumpCounter, completeOnboarding]);
+  }, [addHistoryEntry, bumpCounter, completeOnboarding, noSugarcoating]);
 
   useEffect(() => {
     if (startedFromPending.current) return;
@@ -140,7 +140,7 @@ export default function WorkspacePage() {
   }
 
   return (
-    <div className="mx-auto min-h-screen max-w-7xl px-4 pb-32 pt-6 sm:px-6">
+    <div className="mx-auto min-h-screen max-w-7xl px-4 pb-40 pt-6 sm:px-6 sm:pb-44">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <Link href="/" className="flex items-center gap-2 text-sm text-[var(--fg-muted)] transition hover:text-[var(--fg)]">
           <ArrowLeft size={16} /> LIFE<span className="text-gradient">.EXE</span>
@@ -214,7 +214,6 @@ export default function WorkspacePage() {
               </div>
             )}
 
-            <FollowUpBar onSend={handleFollowUp} disabled={processing} />
           </div>
 
           <aside className="hidden lg:block">
@@ -224,6 +223,8 @@ export default function WorkspacePage() {
           </aside>
         </div>
       )}
+
+      {(turns.length > 0 || processing) && <LifeComposer onSend={handleFollowUp} disabled={processing} />}
 
       <Modal open={modal === "decision"} onClose={() => setModal(null)} title="Decision Simulator">
         <DecisionSimulatorPanel initialInput={decisionSeed?.input} initialFrame={decisionSeed?.frame} />

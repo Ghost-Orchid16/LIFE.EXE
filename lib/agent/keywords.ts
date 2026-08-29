@@ -24,15 +24,21 @@ export const CATEGORY_KEYWORDS: Record<Category, string[]> = {
   ],
   social: [
     "awkward", "social", "party", "group of friends", "everyone thinks", "embarrassed",
-    "social anxiety", "didn't invite me", "left out",
+    "social anxiety", "didn't invite me", "left out", "nobody invited me", "no one invited me",
+    "everyone hates me", "feel like everyone",
   ],
   communication: [
     "how do i tell", "how do i say", "conversation", "need to talk to", "confront",
     "bring this up", "difficult conversation", "tell my", "say to my",
+    "what should i say", "what should i text", "how should i respond", "how should i reply",
+    "how do i respond", "how do i reply", "what do i say", "what do i text",
+    "how do i say something", "should i say something",
   ],
   conflict: [
     "argument", "fight", "conflict", "disagreement", "we argued", "mad at me",
-    "angry at me", "falling out",
+    "angry at me", "falling out", "roommate", "housemate", "flatmate",
+    "boundary", "boundaries", "keeps doing this", "personal space", "keeps eating",
+    "keeps taking", "keeps using my", "shared fridge", "shared space",
   ],
   career: [
     "career", "job offer", "promotion", "resign", "resignation", "quit my job",
@@ -80,8 +86,25 @@ export const CATEGORY_KEYWORDS: Record<Category, string[]> = {
     "suspicious", "scam", "phishing", "otp", "one time password", "urgent payment",
     "wire transfer", "gift card", "verify your account", "won a prize", "lottery",
     "click this link", "suspicious link", "fake job offer", "advance fee",
+    "payment link", "pay within", "minutes to pay", "verify immediately",
+    "account will be suspended", "confirm your details", "share your otp",
+    "share the otp", "click here to", "confirm your identity",
   ],
   other: [],
+};
+
+// Some keywords are too generic to be a strong signal on their own — "should i"
+// fires on almost every question this app is designed for, so it shouldn't be
+// able to outrank a keyword that's actually specific to the situation (e.g.
+// "roommate", "payment link"). Anything not listed here uses the normal
+// word-count-based weight in scoreCategories().
+export const WEAK_SIGNAL_WEIGHTS: Record<string, number> = {
+  "should i": 0.4,
+  "should i buy": 1.2,
+  "buy a": 0.5,
+  "which one": 0.4,
+  "decide": 0.4,
+  "decision": 0.4,
 };
 
 export const RESEARCH_TRIGGER_KEYWORDS = [
@@ -102,7 +125,7 @@ export const URGENCY_WORDS = ["now", "today", "immediately", "urgent", "asap", "
 export const EMOTION_WORDS: Record<string, string[]> = {
   anxious: ["anxious", "scared", "nervous", "worried", "afraid", "panicking", "overthinking"],
   frustrated: ["frustrated", "annoyed", "angry", "furious", "irritated", "fed up"],
-  sad: ["sad", "hurt", "heartbroken", "upset", "depressed", "down", "lonely"],
+  sad: ["sad", "hurt", "heartbroken", "upset", "depressed", "down", "lonely", "hate me", "hates me"],
   conflicted: ["torn", "confused", "conflicted", "don't know what to do", "mixed feelings", "no idea"],
   urgent: URGENCY_WORDS,
   hopeful: ["excited", "hopeful", "optimistic", "looking forward"],
