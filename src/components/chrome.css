@@ -1,0 +1,361 @@
+/* ---------- Buttons ---------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background-color 0.18s var(--ease),
+    border-color 0.18s var(--ease),
+    color 0.18s var(--ease),
+    transform 0.18s var(--ease);
+}
+
+.btn--ghost {
+  background: transparent;
+  border-color: var(--line-2);
+  color: var(--ink);
+}
+
+.btn--ghost:hover {
+  background: var(--surface);
+  border-color: var(--ink-3);
+}
+
+.btn--secondary {
+  background: var(--surface);
+  border-color: var(--line-2);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn--secondary:hover {
+  border-color: var(--ink-3);
+  transform: translateY(-1px);
+}
+
+/* The main call to action: FIGURE IT OUT → */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 52px;
+  padding: 8px 8px 8px 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: var(--shadow-md);
+  transition:
+    background-color 0.2s var(--ease),
+    transform 0.2s var(--ease),
+    box-shadow 0.2s var(--ease);
+}
+
+.btn-primary:hover {
+  background: var(--btn-bg-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-primary__arrow {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--btn-arrow-bg);
+  color: var(--btn-arrow-fg);
+  transition: transform 0.25s var(--ease);
+}
+
+.btn-primary:hover .btn-primary__arrow {
+  transform: translateX(3px);
+}
+
+/* ---------- Header ---------- */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--header-bg);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s var(--ease);
+}
+
+.app[data-view="workspace"] .site-header {
+  border-bottom-color: var(--line);
+}
+
+.site-header__inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: var(--header-h);
+}
+
+.site-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.new-situation.is-armed {
+  background: var(--care-bg);
+  border-color: var(--care-border);
+  color: var(--coral-ink);
+}
+
+/* ---------- Theme toggle ---------- */
+
+.theme-toggle {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 3px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.theme-toggle__thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc(50% - 3px);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s var(--ease);
+}
+
+:root[data-theme="dark"] .theme-toggle__thumb {
+  background: var(--surface-3);
+}
+
+.theme-toggle[data-value="dark"] .theme-toggle__thumb {
+  transform: translateX(100%);
+}
+
+.theme-toggle__option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: color 0.2s var(--ease);
+}
+
+.theme-toggle__option[aria-checked="true"] {
+  color: var(--ink);
+}
+
+.theme-toggle__option:hover {
+  color: var(--ink);
+}
+
+/* ---------- Demo mode badge ---------- */
+
+.mode-badge {
+  position: relative;
+}
+
+.mode-badge__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px dashed var(--coral);
+  border-radius: 999px;
+  background: var(--care-bg);
+  color: var(--coral-ink);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.mode-badge__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--coral);
+}
+
+.mode-badge__panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  width: min(320px, calc(100vw - 2 * var(--gutter)));
+  padding: 16px 18px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  animation: pop-in 0.18s var(--ease);
+}
+
+.mode-badge__panel[hidden] {
+  display: none;
+}
+
+.mode-badge__title {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.mode-badge__panel code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface-3);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+/* ---------- Footer ---------- */
+
+.site-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+}
+
+.site-footer__inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 32px;
+  padding-block: 22px 28px;
+  color: var(--ink-3);
+  font-size: 0.85rem;
+}
+
+.site-footer__name {
+  margin-right: 8px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.site-footer__note {
+  max-width: 44rem;
+}
+
+.app[data-view="workspace"] .site-footer {
+  display: none;
+}
+
+@media (max-width: 599px) {
+  .hide-narrow {
+    display: none;
+  }
+
+  .site-header__actions {
+    gap: 6px;
+  }
+
+  .theme-toggle__option {
+    padding-inline: 10px;
+  }
+
+  .theme-toggle__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .new-situation {
+    padding-inline: 11px;
+    gap: 6px;
+  }
+}
+
+/* Small phones: everything in the header has to share about 330px. */
+@media (max-width: 419px) {
+  .site-header__inner {
+    gap: 10px;
+  }
+
+  .brand {
+    gap: 8px;
+  }
+
+  .brand .logo-mark {
+    width: 26px;
+    height: 26px;
+  }
+
+  .wordmark {
+    font-size: 1rem;
+  }
+
+  .mode-badge__button {
+    gap: 6px;
+    padding-inline: 9px;
+    font-size: 0.64rem;
+  }
+
+  .theme-toggle__option {
+    padding-inline: 8px;
+  }
+}
+
+/* Very narrow screens: every response is still tagged "Demo response", so the header badge can go. */
+@media (max-width: 359px) {
+  .mode-badge {
+    display: none;
+  }
+}

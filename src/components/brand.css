@@ -1,0 +1,58 @@
+.logo-mark {
+  flex: none;
+}
+
+.logo-mark__tile {
+  fill: var(--mark-tile);
+}
+
+:root[data-theme="dark"] .logo-mark__tile {
+  stroke: var(--line-2);
+  stroke-width: 1;
+}
+
+.logo-mark__path {
+  fill: none;
+  stroke: var(--mark-stroke);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.logo-mark__dot {
+  fill: var(--mark-dot);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  font-size: 1.12rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.wordmark__life {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* A monospace period sits in a full-width cell; pull its cell in on both sides. */
+.wordmark__dot {
+  margin-inline: -0.14em -0.12em;
+}
+
+.wordmark__exe {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.86em;
+  letter-spacing: -0.01em;
+  color: var(--blue-ink);
+}

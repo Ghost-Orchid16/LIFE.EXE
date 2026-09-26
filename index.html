@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>LIFE.EXE — Life didn't come with a manual.</title>
+    <meta
+      name="description"
+      content="Describe a real-life situation in your own words. LIFE.EXE helps you understand it, explore your options, and figure out a practical next move."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f3efe7" />
+    <meta property="og:title" content="LIFE.EXE" />
+    <meta property="og:description" content="Life didn't come with a manual. Figure it out." />
+    <meta property="og:type" content="website" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      // Apply the saved (or system) theme before first paint so the page never flashes the wrong colors.
+      (function () {
+        var theme = "light";
+        try {
+          var saved = localStorage.getItem("lifeexe-theme");
+          theme = saved === "light" || saved === "dark" ? saved : matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        } catch (e) {}
+        document.documentElement.setAttribute("data-theme", theme);
+        if (theme === "dark") document.querySelector('meta[name="theme-color"]').setAttribute("content", "#10131a");
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>LIFE.EXE needs JavaScript to run.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
