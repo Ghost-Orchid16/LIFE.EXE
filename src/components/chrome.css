@@ -124,12 +124,6 @@
   gap: 10px;
 }
 
-.new-situation.is-armed {
-  background: var(--care-bg);
-  border-color: var(--care-border);
-  color: var(--coral-ink);
-}
-
 /* ---------- Theme toggle ---------- */
 
 .theme-toggle {

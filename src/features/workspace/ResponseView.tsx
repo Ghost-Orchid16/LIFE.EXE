@@ -1,7 +1,4 @@
-import type { ReactNode } from "react";
 import type { LifeResponse, Mode } from "../../../shared/contract.ts";
-import { ArrowRight } from "../../components/icons.tsx";
-import type { Tone } from "../../lib/focus.ts";
 import { smarten } from "../../lib/typography.ts";
 
 interface ResponseViewProps {
@@ -15,20 +12,15 @@ interface ResponseViewProps {
   onFollowUp: (text: string) => void;
 }
 
-function Section({ title, tone, className = "", children }: { title: string; tone: Tone; className?: string; children: ReactNode }) {
-  return (
-    <section className={`response__section ${className}`} data-tone={tone}>
-      <h3 className="kicker">{title}</h3>
-      {children}
-    </section>
-  );
-}
+/** Longer answers come as paragraphs separated by a blank line. */
+const paragraphs = (text: string) =>
+  text
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean);
 
-const LETTERS = ["A", "B", "C"];
-
-export function ResponseView({ response, mode, number, isLatest, busy, onFollowUp }: ResponseViewProps) {
-  const r = response;
-
+/** One answer: what to do, the next move, the words to use when that helps, and what to ask next. */
+export function ResponseView({ response: r, mode, number, isLatest, busy, onFollowUp }: ResponseViewProps) {
   return (
     <article className="response">
       <h2 className="visually-hidden">LIFE.EXE response {number}</h2>
@@ -39,110 +31,53 @@ export function ResponseView({ response, mode, number, isLatest, busy, onFollowU
       {mode === "demo" && <p className="visually-hidden">This is a pre-written demo response.</p>}
 
       {r.care && (
-        <Section title="First things first" tone="coral" className="response__care">
+        <section className="response__care">
+          <h3 className="kicker">First things first</h3>
           <p>{smarten(r.care)}</p>
-        </Section>
+        </section>
       )}
 
-      {r.lead && (
-        <p className="response__lead">
-          {smarten(r.lead)}
-        </p>
-      )}
-
-      {r.whatsGoingOn && (
-        <Section title="What's going on" tone="blue">
-          <p className="response__text">{smarten(r.whatsGoingOn)}</p>
-        </Section>
-      )}
-
-      {(r.whatMatters.length > 0 || r.whatsUnclear.length > 0) && (
-        <div className="response__pair">
-          {r.whatMatters.length > 0 && (
-            <Section title="What matters" tone="cyan">
-              <ul className="response__list">
-                {r.whatMatters.map((item) => (
-                  <li key={item}>{smarten(item)}</li>
-                ))}
-              </ul>
-            </Section>
-          )}
-          {r.whatsUnclear.length > 0 && (
-            <Section title="What's unclear" tone="violet">
-              <ul className="response__list response__list--unclear">
-                {r.whatsUnclear.map((item) => (
-                  <li key={item}>{smarten(item)}</li>
-                ))}
-              </ul>
-            </Section>
-          )}
+      {r.answer && (
+        <div className="response__answer">
+          {paragraphs(r.answer).map((paragraph) => (
+            <p key={paragraph}>{smarten(paragraph)}</p>
+          ))}
         </div>
       )}
 
-      {r.questions.length > 0 && (
-        <Section title={r.questions.length === 1 ? "One thing first" : "A few things first"} tone="violet" className="response__questions">
-          <ul>
-            {r.questions.map((question) => (
-              <li key={question}>{smarten(question)}</li>
-            ))}
-          </ul>
-        </Section>
+      {r.points.length > 0 && (
+        <ul className="response__points">
+          {r.points.map((point) => (
+            <li key={point}>{smarten(point)}</li>
+          ))}
+        </ul>
       )}
 
-      {r.options.length > 0 && (
-        <Section title="Your options" tone="coral">
-          <ol className="options">
-            {r.options.map((option, i) => (
-              <li key={option.title} className="option">
-                <div className="option__head">
-                  <span className="option__letter" aria-hidden="true">
-                    {LETTERS[i]}
-                  </span>
-                  <h4 className="option__title">
-                    <span className="visually-hidden">Option {LETTERS[i]}: </span>
-                    {smarten(option.title)}
-                  </h4>
-                </div>
-                <p className="option__detail">{smarten(option.detail)}</p>
-                <dl className="option__meta">
-                  {option.upside && (
-                    <div className="option__upside">
-                      <dt>Upside</dt>
-                      <dd>{smarten(option.upside)}</dd>
-                    </div>
-                  )}
-                  {option.tradeoff && (
-                    <div className="option__tradeoff">
-                      <dt>Trade-off</dt>
-                      <dd>{smarten(option.tradeoff)}</dd>
-                    </div>
-                  )}
-                </dl>
-              </li>
-            ))}
-          </ol>
-        </Section>
+      {r.question && <p className="response__question">{smarten(r.question)}</p>}
+
+      {(r.nextMove || r.scripts.length > 0) && (
+        <section className="next-move">
+          <h3 className="kicker">{r.nextMove ? "Next move" : "Try saying"}</h3>
+          {r.nextMove && <p className="next-move__text">{smarten(r.nextMove)}</p>}
+          {r.scripts.length > 0 && (
+            <div className="scripts">
+              {r.nextMove && <p className="scripts__label">{r.scripts.length > 1 ? "Try one of these:" : "Try:"}</p>}
+              <ul>
+                {r.scripts.map((line) => (
+                  <li key={line}>
+                    <q>{smarten(line)}</q>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
       )}
 
-      {r.sayItLikeThis.length > 0 && (
-        <Section title="How you might say it" tone="cyan">
-          <ul className="phrases">
-            {r.sayItLikeThis.map((line) => (
-              <li key={line}>
-                <q>{smarten(line)}</q>
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
-
-      {r.nextMove && (
-        <Section title="Next move" tone="lime" className="next-move">
-          <p className="next-move__text">
-            <ArrowRight size={18} className="next-move__arrow" />
-            <span>{smarten(r.nextMove)}</span>
-          </p>
-        </Section>
+      {r.alternative && (
+        <p className="response__alternative">
+          <span className="response__alternative-label">Alternative:</span> {smarten(r.alternative)}
+        </p>
       )}
 
       {isLatest && r.followUps.length > 0 && (

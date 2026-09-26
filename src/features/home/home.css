@@ -165,6 +165,199 @@
   color: var(--coral-ink);
 }
 
+/* ---------- Saved situations ---------- */
+
+.memory {
+  max-width: 880px;
+  margin-top: clamp(32px, 4.5vw, 48px);
+}
+
+.memory__list {
+  margin-top: 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.memory__list li + li {
+  border-top: 1px solid var(--line);
+}
+
+.memory__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 16px;
+  width: 100%;
+  padding: 14px 18px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  transition: background-color 0.18s var(--ease);
+}
+
+.memory__item:hover {
+  background: var(--surface-2);
+}
+
+.memory__item:focus-visible {
+  outline-offset: -3px;
+  border-radius: var(--radius);
+}
+
+.memory__title {
+  grid-column: 1;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 1.04rem;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memory__meta {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 0;
+  color: var(--ink-3);
+  font-size: 0.84rem;
+}
+
+/* A small dot between the details, drawn so screen readers don't announce it. */
+.memory__meta > * + *::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin-inline: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: middle;
+  opacity: 0.7;
+}
+
+.memory__arrow {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--ink-3);
+  transition:
+    color 0.18s var(--ease),
+    transform 0.25s var(--ease);
+}
+
+.memory__item:hover .memory__arrow {
+  color: var(--ink);
+  transform: translateX(3px);
+}
+
+.memory__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  margin-top: 10px;
+  padding-inline: 6px;
+}
+
+.memory__link {
+  min-height: 32px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.86rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 3px;
+}
+
+.memory__link:hover {
+  color: var(--ink);
+  text-decoration-color: currentColor;
+}
+
+.memory__clear {
+  margin-left: auto;
+  color: var(--ink-3);
+}
+
+.memory__confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 14px;
+  margin-left: auto;
+}
+
+.memory__question {
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.memory__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.memory__actions .btn {
+  min-height: 34px;
+  padding: 6px 14px;
+  font-size: 0.86rem;
+}
+
+.memory__delete {
+  background: var(--care-bg);
+  border-color: var(--care-border);
+  color: var(--coral-ink);
+}
+
+.memory__delete:hover {
+  border-color: var(--coral);
+}
+
+.memory__cleared {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 880px;
+  margin-top: clamp(32px, 4.5vw, 48px);
+  padding-inline: 6px;
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+
+.memory__cleared svg {
+  flex: none;
+  color: var(--lime-ink);
+}
+
+.memory__cleared:focus-visible {
+  outline-offset: 6px;
+  border-radius: 6px;
+}
+
+@media (max-width: 559px) {
+  .memory__item {
+    padding: 13px 14px;
+  }
+
+  .memory__confirm,
+  .memory__question {
+    justify-content: flex-start;
+    margin-left: 0;
+  }
+}
+
 /* ---------- Situation form ---------- */
 
 .situation {

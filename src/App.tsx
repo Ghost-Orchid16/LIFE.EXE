@@ -10,7 +10,7 @@ import { fetchMode } from "./lib/api.ts";
 export default function App() {
   const { theme, setTheme } = useTheme();
   const [mode, setMode] = useState<Mode | null>(null);
-  const { turns, busy, send, retry, reset } = useConversation(setMode);
+  const { conversationId, turns, busy, saved, send, retry, startNew, open, clearMemory } = useConversation(setMode);
   const view = turns.length > 0 ? "workspace" : "home";
 
   // Learn up front whether the live AI is connected, so demo mode is labelled before anyone types.
@@ -32,11 +32,11 @@ export default function App() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <Header mode={mode} theme={theme} onThemeChange={setTheme} onNewSituation={view === "workspace" ? reset : undefined} />
+      <Header mode={mode} theme={theme} onThemeChange={setTheme} onNewSituation={view === "workspace" ? startNew : undefined} />
       {view === "home" ? (
-        <Home mode={mode} onStart={send} />
+        <Home mode={mode} saved={saved} onStart={send} onOpen={open} onClearMemory={clearMemory} />
       ) : (
-        <Workspace turns={turns} busy={busy} onSend={send} onRetry={retry} />
+        <Workspace key={conversationId} turns={turns} busy={busy} onSend={send} onRetry={retry} />
       )}
       <Footer />
     </div>

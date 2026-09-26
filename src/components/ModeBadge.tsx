@@ -42,7 +42,7 @@ export function ModeBadge() {
           how LIFE.EXE works, but they aren't written for your exact situation.
         </p>
         <p>
-          To switch on the live AI, set <code>AI_API_KEY</code> on the server.
+          To switch on the live AI, set <code>GEMINI_API_KEY</code> on the server.
         </p>
       </div>
     </div>

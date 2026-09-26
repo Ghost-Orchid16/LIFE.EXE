@@ -2,25 +2,14 @@ import type { LifeResponse, StreamEvent } from "../shared/contract.ts";
 
 export const sampleResponse = (overrides: Partial<LifeResponse> = {}): LifeResponse => ({
   care: "",
-  whatsGoingOn: "You have two offers and feel stuck.",
-  whatMatters: ["Growth", "Stability"],
-  whatsUnclear: ["The deadline."],
-  lead: "Start with what matters most right now.",
-  questions: [],
-  options: [
-    { title: "Compare", detail: "List priorities.", upside: "Clarity.", tradeoff: "Takes time." },
-    { title: "Imagine", detail: "Picture a year in each.", upside: "Honest.", tradeoff: "Optimistic." },
-  ],
-  sayItLikeThis: [],
-  nextMove: "Write both options side by side.",
-  followUps: ["What should I do first?"],
-  situation: {
-    title: "Choosing between two offers",
-    summary: "Two offers, one decision.",
-    focus: "decision",
-    matters: ["Growth", "Stability"],
-    nextMove: "Compare the offers side by side.",
-  },
+  answer: "Take the one that fits the next year or two, not forever.",
+  points: [],
+  question: "",
+  nextMove: "Write down what you'd regret missing in each offer.",
+  scripts: [],
+  alternative: "",
+  followUps: ["What if I choose wrong?"],
+  title: "Choosing between two offers",
   ...overrides,
 });
 

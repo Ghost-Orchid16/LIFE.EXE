@@ -69,11 +69,13 @@ function pickReply(scenario: DemoScenario, text: string): DemoReply {
   if (extra) return extra.reply;
   const intent = INTENTS.find(({ match }) => match.test(text));
   if (intent) return intent.reply(scenario);
-  return {
-    ...FALLBACK_REPLY,
-    nextMove: scenario.initial.nextMove,
-    nextMoveShort: scenario.initial.situation.nextMove,
-  };
+  return { ...FALLBACK_REPLY, nextMove: scenario.initial.nextMove };
+}
+
+/** The scenario's first answer, opening with a direct reply when the person asked the question it answers. */
+function firstAnswer(scenario: DemoScenario, text: string): LifeResponse {
+  const { asked, initial } = scenario;
+  return asked?.match.test(text) ? { ...initial, answer: asked.answer } : initial;
 }
 
 /** Picks the pre-written response that best fits the conversation so far. */
@@ -84,16 +86,18 @@ export function buildDemoResponse(messages: ChatMessage[]): LifeResponse {
   const previous = previousResponses.at(-1);
 
   // Safety first, at any point in the conversation.
-  if (isCrisis(latest)) return previous ? composeReply(CRISIS_FOLLOW_UP, CRISIS_RESPONSE.situation) : CRISIS_RESPONSE;
-  if (previous?.situation.focus === "support") return composeReply(CRISIS_FOLLOW_UP, CRISIS_RESPONSE.situation);
+  const supporting = previous?.title === CRISIS_RESPONSE.title;
+  if (isCrisis(latest) || supporting) {
+    return previous ? composeReply(CRISIS_FOLLOW_UP, CRISIS_RESPONSE.title) : CRISIS_RESPONSE;
+  }
 
   // First real description of the situation (including right after asking for more detail).
-  if (!previous || previous.situation.title === CLARIFY_RESPONSE.situation.title) {
+  if (!previous || previous.title === CLARIFY_RESPONSE.title) {
     const scenario = matchScenario(latest);
     if (!scenario && wordCount(latest) < 4) return CLARIFY_RESPONSE;
-    return (scenario ?? GENERAL_SCENARIO).initial;
+    return firstAnswer(scenario ?? GENERAL_SCENARIO, latest);
   }
 
   const scenario = matchScenario(userTexts.join("\n")) ?? GENERAL_SCENARIO;
-  return composeReply(pickReply(scenario, latest), scenario.initial.situation);
+  return composeReply(pickReply(scenario, latest), scenario.initial.title);
 }

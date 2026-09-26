@@ -3,7 +3,7 @@ import type { ChatMessage, ErrorCode, LifeResponse, Mode, Stage } from "../../sh
 export interface RespondOptions {
   /** Aborted when the person disconnects or the response deadline passes. */
   signal: AbortSignal;
-  /** Called as the answer moves through understanding → context → options → next move. */
+  /** Called as the answer moves through understanding → thinking → answering. */
   onStage: (stage: Stage) => void;
 }
 

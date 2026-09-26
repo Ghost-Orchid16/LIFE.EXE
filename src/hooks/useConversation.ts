@@ -1,99 +1,41 @@
-import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from "react";
-import type { ChatMessage, LifeResponse, Mode, Stage } from "../../shared/contract.ts";
-import { ApiError, sendConversation, type ClientErrorCode } from "../lib/api.ts";
+import { useCallback, useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+import type { Mode } from "../../shared/contract.ts";
+import { ApiError, sendConversation } from "../lib/api.ts";
+import {
+  EMPTY_CONVERSATION,
+  contextFor,
+  isBusy,
+  newId,
+  pendingTurn,
+  reducer,
+  resumeTurns,
+  savedSignature,
+  withoutTrailingError,
+  type ConversationState,
+  type Turn,
+  type TurnErrorCode,
+  type UserTurn,
+} from "../lib/conversation.ts";
+import { MEMORY_KEY, createMemory, type KeyValueStore, type Memory } from "../lib/memory.ts";
 
-export type TurnErrorCode = ClientErrorCode | "interrupted";
-
-export type UserTurn = { id: string; role: "user"; text: string };
-export type AssistantTurn =
-  | { id: string; role: "assistant"; status: "pending"; stage: Stage }
-  | { id: string; role: "assistant"; status: "done"; response: LifeResponse; mode: Mode }
-  | { id: string; role: "assistant"; status: "error"; code: TurnErrorCode };
-export type Turn = UserTurn | AssistantTurn;
-
-type Action =
-  | { type: "send"; user: UserTurn; pending: AssistantTurn }
-  | { type: "retry"; pending: AssistantTurn }
-  | { type: "stage"; id: string; stage: Stage }
-  | { type: "resolve"; id: string; response: LifeResponse; mode: Mode }
-  | { type: "fail"; id: string; code: TurnErrorCode }
-  | { type: "reset" };
+export type { AssistantTurn, Turn, TurnErrorCode, UserTurn } from "../lib/conversation.ts";
 
 // Stop waiting if nothing has come back in this long; the server gives up well before this.
 const CLIENT_TIMEOUT_MS = 60_000;
-const SESSION_KEY = "lifeexe-session";
 
-const newId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-
-const pendingTurn = (): AssistantTurn => ({ id: newId(), role: "assistant", status: "pending", stage: "understanding" });
-
-function withoutTrailingError(turns: Turn[]): Turn[] {
-  const last = turns.at(-1);
-  return last?.role === "assistant" && last.status === "error" ? turns.slice(0, -1) : turns;
-}
-
-export const isBusy = (turns: Turn[]) => turns.some((t) => t.role === "assistant" && t.status === "pending");
-
-function reducer(turns: Turn[], action: Action): Turn[] {
-  switch (action.type) {
-    case "send":
-      return [...withoutTrailingError(turns), action.user, action.pending];
-    case "retry":
-      return [...withoutTrailingError(turns), action.pending];
-    case "stage":
-      return turns.map((t) =>
-        t.id === action.id && t.role === "assistant" && t.status === "pending" ? { ...t, stage: action.stage } : t,
-      );
-    case "resolve":
-      return turns.map((t) =>
-        t.id === action.id ? { id: t.id, role: "assistant", status: "done", response: action.response, mode: action.mode } : t,
-      );
-    case "fail":
-      return turns.map((t) => (t.id === action.id ? { id: t.id, role: "assistant", status: "error", code: action.code } : t));
-    case "reset":
-      return [];
-  }
-}
-
-/** The conversation as the API expects it: finished turns only. */
-function toMessages(turns: Turn[]): ChatMessage[] {
-  return turns.flatMap((turn): ChatMessage[] => {
-    if (turn.role === "user") return [{ role: "user", content: turn.text }];
-    return turn.status === "done" ? [{ role: "assistant", content: turn.response }] : [];
-  });
-}
-
-function isTurn(value: unknown): value is Turn {
-  const turn = value as Partial<Record<string, unknown>> | null;
-  if (!turn || typeof turn.id !== "string") return false;
-  if (turn.role === "user") return typeof turn.text === "string";
-  if (turn.role !== "assistant") return false;
-  if (turn.status === "error") return typeof turn.code === "string";
-  const response = turn.response as Partial<LifeResponse> | undefined;
-  return turn.status === "done" && Array.isArray(response?.options) && typeof response?.situation?.title === "string";
-}
-
-// The conversation survives a reload of this tab, and nothing more: sessionStorage is cleared when the tab closes.
-function restoreSession(): Turn[] {
+/** The browser's storage, or `null` where it's blocked (some privacy settings throw on access). */
+function browserStorage(name: "localStorage" | "sessionStorage"): KeyValueStore | null {
   try {
-    const saved: unknown = JSON.parse(sessionStorage.getItem(SESSION_KEY) ?? "[]");
-    if (!Array.isArray(saved) || !saved.every(isTurn)) return [];
-    const turns: Turn[] = saved;
-    if (turns.at(-1)?.role === "user") turns.push({ id: newId(), role: "assistant", status: "error", code: "interrupted" });
-    return turns;
+    return window[name];
   } catch {
-    return [];
+    return null;
   }
 }
 
-function saveSession(turns: Turn[]) {
-  try {
-    const settled = turns.filter((t) => t.role === "user" || t.status !== "pending");
-    if (settled.length) sessionStorage.setItem(SESSION_KEY, JSON.stringify(settled));
-    else sessionStorage.removeItem(SESSION_KEY);
-  } catch {
-    // Storage can be unavailable (private mode, quotas). The conversation still works in memory.
-  }
+function openMemory(): Memory {
+  const memory = createMemory(browserStorage("localStorage"), browserStorage("sessionStorage"));
+  memory.adoptLegacySession();
+  return memory;
 }
 
 interface ActiveRequest {
@@ -102,17 +44,65 @@ interface ActiveRequest {
 }
 
 export function useConversation(onMode: (mode: Mode) => void) {
-  const [turns, dispatch] = useReducer(reducer, undefined, restoreSession);
-  const turnsRef = useRef(turns);
+  const [memory] = useState(openMemory);
+  // Reopens the situation the person was in when they left. Nothing is sent until they send something.
+  const [state, dispatch] = useReducer(reducer, memory, (opened) => opened.reopen());
+  const [saved, setSaved] = useState(memory.list);
+  const stateRef = useRef(state);
+  // The open situation as last written to local memory, so it's written only when something new was said.
+  const persisted = useRef({ id: state.id, signature: savedSignature(state.turns), stored: state.id !== null });
   const active = useRef<ActiveRequest | null>(null);
 
   useLayoutEffect(() => {
-    turnsRef.current = turns;
-  }, [turns]);
+    stateRef.current = state;
+  }, [state]);
 
-  useEffect(() => saveSession(turns), [turns]);
+  useEffect(() => {
+    const { id, turns } = state;
+    if (!id) return;
+    const signature = savedSignature(turns);
+    if (persisted.current.id === id && persisted.current.signature === signature) return;
+    persisted.current = { id, signature, stored: memory.save(id, turns) };
+    if (persisted.current.stored) setSaved(memory.list());
+  }, [memory, state]);
+
+  useEffect(() => memory.setOpenId(state.id), [memory, state.id]);
 
   useEffect(() => () => active.current?.controller.abort(), []);
+
+  const stop = useCallback(() => {
+    if (!active.current) return;
+    active.current.stopReason = "reset";
+    active.current.controller.abort();
+    active.current = null;
+  }, []);
+
+  /** Shows `next` without saving it again: it came from local memory, or it's empty. */
+  const show = useCallback((next: ConversationState) => {
+    persisted.current = { id: next.id, signature: savedSignature(next.turns), stored: next.id !== null };
+    stateRef.current = next;
+    dispatch(next.id ? { type: "open", conversationId: next.id, turns: next.turns } : { type: "reset" });
+  }, []);
+
+  // Another tab changed local memory: refresh the list, and follow along if it touched this tab's situation.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== MEMORY_KEY) return;
+      setSaved(memory.list());
+      const { id, turns } = stateRef.current;
+      if (!id || persisted.current.id !== id || !persisted.current.stored) return;
+      const stored = memory.get(id);
+      if (!stored) {
+        // Deleted elsewhere (local memory was cleared): don't keep it here, or save it again.
+        stop();
+        show(EMPTY_CONVERSATION);
+      } else if (!isBusy(turns) && savedSignature(stored.turns) !== savedSignature(turns)) {
+        show({ id, turns: resumeTurns(stored.turns) });
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [memory, show, stop]);
 
   const run = useCallback(
     async (history: Turn[], pendingId: string) => {
@@ -125,7 +115,7 @@ export function useConversation(onMode: (mode: Mode) => void) {
 
       let mode: Mode = "live";
       try {
-        const response = await sendConversation(toMessages(history), {
+        const response = await sendConversation(contextFor(history), {
           signal: request.controller.signal,
           onStage: (stage) => dispatch({ type: "stage", id: pendingId, stage }),
           onMode: (next) => {
@@ -133,7 +123,7 @@ export function useConversation(onMode: (mode: Mode) => void) {
             onMode(next);
           },
         });
-        dispatch({ type: "resolve", id: pendingId, response, mode });
+        dispatch({ type: "resolve", id: pendingId, response, mode, at: Date.now() });
       } catch (error) {
         if (request.stopReason === "reset") return;
         const code: TurnErrorCode =
@@ -147,38 +137,71 @@ export function useConversation(onMode: (mode: Mode) => void) {
     [onMode],
   );
 
+  /** Sends a message in the open situation, or starts a new one. */
   const send = useCallback(
     (text: string) => {
-      const current = turnsRef.current;
-      if (isBusy(current)) return;
-      const user: UserTurn = { id: newId(), role: "user", text };
+      const current = stateRef.current;
+      if (isBusy(current.turns)) return;
+      const conversationId = current.id ?? newId();
+      const user: UserTurn = { id: newId(), role: "user", text, at: Date.now() };
       const pending = pendingTurn();
-      turnsRef.current = [...withoutTrailingError(current), user, pending];
-      dispatch({ type: "send", user, pending });
-      void run([...withoutTrailingError(current), user], pending.id);
+      const history = [...withoutTrailingError(current.turns), user];
+      stateRef.current = { id: conversationId, turns: [...history, pending] };
+      dispatch({ type: "send", conversationId, user, pending });
+      void run(history, pending.id);
     },
     [run],
   );
 
   const retry = useCallback(() => {
-    const current = turnsRef.current;
-    const last = current.at(-1);
+    const current = stateRef.current;
+    const last = current.turns.at(-1);
     if (last?.role !== "assistant" || last.status !== "error") return;
     const pending = pendingTurn();
-    turnsRef.current = [...withoutTrailingError(current), pending];
+    const history = withoutTrailingError(current.turns);
+    stateRef.current = { ...current, turns: [...history, pending] };
     dispatch({ type: "retry", pending });
-    void run(withoutTrailingError(current), pending.id);
+    void run(history, pending.id);
   }, [run]);
 
-  const reset = useCallback(() => {
-    if (active.current) {
-      active.current.stopReason = "reset";
-      active.current.controller.abort();
-      active.current = null;
-    }
-    turnsRef.current = [];
-    dispatch({ type: "reset" });
-  }, []);
+  /** Back to a blank page. The situation that was open stays saved. */
+  const startNew = useCallback(() => {
+    stop();
+    show(EMPTY_CONVERSATION);
+    setSaved(memory.list());
+  }, [memory, show, stop]);
 
-  return { turns, busy: isBusy(turns), send, retry, reset };
+  /** Opens a saved situation to continue it. */
+  const open = useCallback(
+    (id: string) => {
+      const stored = memory.get(id);
+      if (!stored) {
+        setSaved(memory.list());
+        return;
+      }
+      stop();
+      show({ id, turns: resumeTurns(stored.turns) });
+    },
+    [memory, show, stop],
+  );
+
+  /** Deletes every saved situation from this browser, including the one open here. */
+  const clearMemory = useCallback(() => {
+    stop();
+    memory.clear();
+    show(EMPTY_CONVERSATION);
+    setSaved([]);
+  }, [memory, show, stop]);
+
+  return {
+    conversationId: state.id,
+    turns: state.turns,
+    busy: isBusy(state.turns),
+    saved,
+    send,
+    retry,
+    startNew,
+    open,
+    clearMemory,
+  };
 }
