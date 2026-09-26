@@ -21,7 +21,7 @@ export function Header({ mode, theme, onThemeChange, onNewSituation }: HeaderPro
         <Brand />
         <div className="site-header__actions">
           {mode === "demo" && <ModeBadge />}
-          {onNewSituation && <NewSituationButton onConfirm={onNewSituation} />}
+          {onNewSituation && <NewSituationButton onClick={onNewSituation} />}
           <ThemeToggle theme={theme} onChange={onThemeChange} />
         </div>
       </div>

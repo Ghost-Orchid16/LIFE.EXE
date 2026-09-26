@@ -1,4 +1,6 @@
 import type { Mode } from "../../../shared/contract.ts";
+import type { SavedConversation } from "../../lib/memory.ts";
+import { SavedSituations } from "./SavedSituations.tsx";
 import { SituationForm } from "./SituationForm.tsx";
 import "./home.css";
 
@@ -19,7 +21,16 @@ const STEPS = [
   { title: "Take the next step", text: "One practical move you can make now. Then keep talking it through.", tone: "lime" },
 ] as const;
 
-export function Home({ mode, onStart }: { mode: Mode | null; onStart: (text: string) => void }) {
+interface HomeProps {
+  mode: Mode | null;
+  /** Situations saved in this browser, most recent first. */
+  saved: SavedConversation[];
+  onStart: (text: string) => void;
+  onOpen: (id: string) => void;
+  onClearMemory: () => void;
+}
+
+export function Home({ mode, saved, onStart, onOpen, onClearMemory }: HomeProps) {
   return (
     <main id="main" className="home">
       <section className="hero container" aria-labelledby="hero-title">
@@ -39,7 +50,7 @@ export function Home({ mode, onStart }: { mode: Mode | null; onStart: (text: str
           <div className="hero__input">
             <SituationForm onSubmit={onStart} />
             <p className="hero__notes">
-              <span>No account. No history. Close the tab and it's gone.</span>
+              <span>No account. Conversations are saved in this browser.</span>
               {mode === "demo" && (
                 <span className="hero__demo-note">Demo mode: responses are pre-written examples, not live AI.</span>
               )}
@@ -58,6 +69,8 @@ export function Home({ mode, onStart }: { mode: Mode | null; onStart: (text: str
             ))}
           </ul>
         </div>
+
+        <SavedSituations conversations={saved} onOpen={onOpen} onClear={onClearMemory} />
       </section>
 
       <section className="how container" aria-labelledby="how-title">
@@ -91,6 +104,12 @@ export function Home({ mode, onStart }: { mode: Mode | null; onStart: (text: str
             <p>
               Tell it what's happening. It helps you understand the situation, explore your options, and figure out a
               practical next move. It won't make the decision for you; it helps you make it well.
+            </p>
+            <p>
+              Your conversations are saved in this browser, so you can come back to them. There's no account, and
+              LIFE.EXE's server doesn't keep them. To write an answer, the conversation you're working on is sent to
+              LIFE.EXE's server and, when the live AI is on, to Google's Gemini API, so it isn't completely private.
+              Anyone using this browser can see what's saved here, and clearing local memory deletes it.
             </p>
             <p className="about__closer">No perfect answers. Just better ways forward.</p>
           </div>

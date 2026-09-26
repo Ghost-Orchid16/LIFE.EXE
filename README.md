@@ -13,7 +13,7 @@ LIFE.EXE is a small decision-support tool for real-life situations. You describe
 1. **You explain the situation.** No categories or forms, just plain language.
 2. **LIFE.EXE works through it.** It separates facts from assumptions, figures out what matters and what's still unclear, and weighs a few realistic approaches. While it works you see its progress (Understanding → Context → Options → Next move), never its private reasoning.
 3. **You get a structured answer:** what's going on, what matters, what's unclear, two or three options with their upside and trade-off, and one concrete next move. If something important is missing, it asks one short question instead of guessing.
-4. **You continue the conversation.** Follow-ups stay part of the same situation, and the panel beside the conversation keeps a running summary of the situation, the current focus, and the next move.
+4. **You continue the conversation.** Follow-ups stay part of the same situation, and the panel beside the conversation keeps a running summary of the situation, the current focus, and the next move. Conversations are saved in your browser, so you can come back to a situation later and pick it up where you left off.
 
 LIFE.EXE doesn't diagnose, doesn't claim to know what other people think, and points to real-world help when a situation is serious. If someone may be in danger, safety comes first.
 
@@ -61,6 +61,19 @@ When no `GEMINI_API_KEY` is set, LIFE.EXE answers with pre-written responses ins
 - If a message suggests someone may be in danger, demo mode always responds with a support message pointing to emergency services and crisis lines.
 - Demo mode is always labelled: a **Demo mode** badge in the header, a note under the input, and a **Demo response** tag on every answer. Demo answers are never presented as live AI.
 
+## Conversation memory
+
+LIFE.EXE remembers conversations in the browser, so someone coming back on the same browser and device can continue a situation where they left off. There's no account and no database.
+
+- **What's saved, and where.** Each situation is saved in the browser's `localStorage` (key `lifeexe-memory`, a small versioned JSON document): its ID, the messages and LIFE.EXE's answers with their timestamps, when it was started and last updated, and a short summary (LIFE.EXE's title for the situation). Two small keys remember which situation was open (`lifeexe-last-open` in localStorage, `lifeexe-open` per tab in sessionStorage). Nothing else is stored: no API keys, no configuration, no error details.
+- **Coming back.** Opening LIFE.EXE again, after a reload or days later, reopens the situation you were in, as you left it, so you can simply keep typing. (A reply that was still being written when you left shows as interrupted, with **Try again**.) Nothing is sent when the page opens: a request is only made when you send a message.
+- **Other situations.** **New situation** goes back to the home page, where saved situations are listed under the input ("Pick up where you left off"); choose one to continue it.
+- **Separate situations stay separate.** "New situation" starts a fresh conversation and keeps the previous one saved. When you continue a situation, only that conversation goes with your message, the same way it always has; other situations are never sent. A very long thread is trimmed to the API's limit of 40 messages by keeping its opening exchange and its most recent messages. Every answer includes LIFE.EXE's running summary of the situation, so the recent answers still carry what the middle said.
+- **Clear local memory.** The link under the list of saved situations deletes every saved situation from the browser, after asking you to confirm. It doesn't touch the theme, the server, or the Gemini configuration.
+- **Limits.** Memory keeps the 50 most recently used situations, and makes room the same way if the browser's storage fills up. If the browser blocks storage, LIFE.EXE still works; conversations just aren't saved.
+
+Saved conversations stay on the device, but they aren't encrypted, and anyone using the same browser profile can open them. When you send a message, the conversation you're in is sent to LIFE.EXE's server and, in live mode, to the Gemini API (see the free-tier privacy note below). The About section of the home page explains this in plain language.
+
 ## Deploy to Netlify
 
 The project is set up for Netlify: `netlify.toml` defines the build, and `netlify/functions/life.ts` serves the API at `/api/life`.
@@ -96,10 +109,10 @@ server/                     API layer and AI service (no browser code)
   node-adapter.ts           Lets the Vite dev server run the same handler locally
 shared/contract.ts          Types and limits shared by the browser and the server
 src/                        The React app
-  features/home/            Home page: the situation input, how it works, about
+  features/home/            Home page: the situation input, saved situations, how it works, about
   features/workspace/       Conversation, processing sequence, situation panel, composer
   hooks/                    Conversation state, theme, media queries
-  lib/                      API client, error messages, typography helpers
+  lib/                      API client, conversation state, local memory, error messages, formatting
   styles/                   Design tokens (light and dark) and base styles
 ```
 
@@ -111,7 +124,7 @@ Browser ──POST /api/life──▶ handler ──▶ provider (Gemini or demo
    └──── server-sent events ──┘   meta → stage (×4) → result | error
 ```
 
-The browser sends the whole conversation with each message; nothing is stored on the server. The conversation is kept in the browser tab (session storage), so it survives a reload and disappears when the tab is closed.
+With each message the browser sends the conversation being continued, and only that one; nothing is stored on the server. Conversations are saved in the browser instead (see [Conversation memory](#conversation-memory)).
 
 ### Switching AI providers
 
@@ -124,7 +137,7 @@ Providers implement the `LifeProvider` interface in `server/providers/types.ts`:
 | `npm run dev`       | Start the app and API locally with hot reload                   |
 | `npm run build`     | Type-check and build the production site into `dist/`          |
 | `npm run preview`   | Serve the production build locally, API included                |
-| `npm test`          | Run the server tests (Node's built-in test runner)              |
+| `npm test`          | Run the tests (Node's built-in test runner)                     |
 | `npm run typecheck` | Type-check everything                                           |
 | `npm run lint`      | Lint with oxlint                                                |
 
