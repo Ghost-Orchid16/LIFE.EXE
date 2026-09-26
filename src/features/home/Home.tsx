@@ -6,19 +6,15 @@ import "./home.css";
 
 const PHILOSOPHY = [
   { from: "Confusion", to: "Clarity", tone: "blue" },
-  { from: "Uncertainty", to: "Options", tone: "coral" },
-  { from: "Options", to: "Next step", tone: "lime" },
+  { from: "Uncertainty", to: "An answer", tone: "coral" },
+  { from: "Stuck", to: "Next move", tone: "lime" },
 ] as const;
 
 const STEPS = [
   { title: "Tell us", text: "Describe what's happening in your own words. No forms, no categories.", tone: "blue" },
-  {
-    title: "Understand it",
-    text: "LIFE.EXE separates what you know from what you're assuming, and finds what actually matters.",
-    tone: "cyan",
-  },
-  { title: "Explore options", text: "Two or three realistic ways forward, each with its upside and its trade-off.", tone: "coral" },
-  { title: "Take the next step", text: "One practical move you can make now. Then keep talking it through.", tone: "lime" },
+  { title: "Get an answer", text: "LIFE.EXE thinks it through and tells you what it would do. No lecture, no report.", tone: "cyan" },
+  { title: "Know your next move", text: "One practical thing to do now, with the words to use when that helps.", tone: "lime" },
+  { title: "Keep talking", text: "Ask a follow-up, push back, or add details. It picks up where you left off.", tone: "coral" },
 ] as const;
 
 interface HomeProps {
@@ -42,8 +38,7 @@ export function Home({ mode, saved, onStart, onOpen, onClearMemory }: HomeProps)
           Life didn't come with a manual. <span className="hero__highlight">Figure it out.</span>
         </h1>
         <p className="hero__lede">
-          Describe what's going on in your own words. LIFE.EXE helps you see the situation clearly, weigh your options,
-          and find a practical next move.
+          Describe what's going on in your own words. LIFE.EXE thinks it through and tells you what to do next.
         </p>
 
         <div className="hero__workbench">
@@ -102,8 +97,8 @@ export function Home({ mode, saved, onStart, onOpen, onClearMemory }: HomeProps)
               to do next.
             </p>
             <p>
-              Tell it what's happening. It helps you understand the situation, explore your options, and figure out a
-              practical next move. It won't make the decision for you; it helps you make it well.
+              Tell it what's happening, and it tells you what it would do and what to do next, without a lecture. The
+              decision is still yours; it just helps you make it well.
             </p>
             <p>
               Your conversations are saved in this browser, so you can come back to them. There's no account, and

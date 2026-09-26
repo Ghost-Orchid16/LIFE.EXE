@@ -2,13 +2,7 @@
 // Nothing here is sent anywhere. A saved conversation only leaves the browser when the person continues it,
 // as the context of that one request, exactly like a conversation that never left the tab.
 
-import {
-  FOCUS_KINDS,
-  type Focus,
-  type LifeOption,
-  type LifeResponse,
-  type SituationSnapshot,
-} from "../../shared/contract.ts";
+import type { LifeResponse } from "../../shared/contract.ts";
 import {
   EMPTY_CONVERSATION,
   newId,
@@ -36,7 +30,8 @@ export const OPEN_KEY = "lifeexe-open";
 /** Where earlier versions kept the tab's conversation (sessionStorage). */
 export const LEGACY_SESSION_KEY = "lifeexe-session";
 
-const VERSION = 1;
+// Version 1 saved answers in the earlier, longer format; they are read into the current one.
+const VERSION = 2;
 /** How many situations memory keeps. Beyond this, the one untouched the longest makes room. */
 export const MAX_SAVED = 50;
 const TITLE_CHARS = 80;
@@ -45,7 +40,6 @@ export interface SavedConversation {
   id: string;
   /** A short summary of the situation: LIFE.EXE's latest title for it, or the start of the first message. */
   title: string;
-  focus: Focus | null;
   createdAt: number;
   updatedAt: number;
   turns: SavedTurn[];
@@ -60,38 +54,49 @@ type Json = Record<string, unknown>;
 const isRecord = (value: unknown): value is Json => typeof value === "object" && value !== null && !Array.isArray(value);
 const isText = (value: unknown): value is string => typeof value === "string";
 const isTime = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
-const isFocus = (value: unknown): value is Focus => (FOCUS_KINDS as readonly unknown[]).includes(value);
 const texts = (value: unknown): string[] | null => (Array.isArray(value) && value.every(isText) ? [...value] : null);
 
-function readOption(value: unknown): LifeOption | null {
-  if (!isRecord(value)) return null;
-  const { title, detail, upside, tradeoff } = value;
-  return isText(title) && isText(detail) && isText(upside) && isText(tradeoff) ? { title, detail, upside, tradeoff } : null;
+/** An answer in the current format. */
+function readCurrentResponse(value: Json): LifeResponse | null {
+  const { care, answer, question, nextMove, alternative, title } = value;
+  const points = texts(value.points);
+  const scripts = texts(value.scripts);
+  const followUps = texts(value.followUps);
+  if (!isText(care) || !isText(answer) || !isText(question) || !isText(nextMove) || !isText(alternative) || !isText(title)) {
+    return null;
+  }
+  if (!points || !scripts || !followUps) return null;
+  return { care, answer, points, question, nextMove, scripts, alternative, followUps, title };
 }
 
-function readSituation(value: unknown): SituationSnapshot | null {
-  if (!isRecord(value)) return null;
-  const { title, summary, focus, nextMove } = value;
-  const matters = texts(value.matters);
-  if (!isText(title) || !isText(summary) || !isFocus(focus) || !matters || !isText(nextMove)) return null;
-  return { title, summary, focus, matters, nextMove };
+/**
+ * An answer saved in the earlier, longer format, reduced to what the current format shows: its lead becomes
+ * the answer, and its next move, wording and follow-ups carry over. The old analysis sections are dropped.
+ */
+function readEarlierResponse(value: Json): LifeResponse | null {
+  const { care, whatsGoingOn, lead, nextMove, situation } = value;
+  const questions = texts(value.questions);
+  const scripts = texts(value.sayItLikeThis);
+  const followUps = texts(value.followUps);
+  if (!isText(care) || !isText(whatsGoingOn) || !isText(lead) || !isText(nextMove)) return null;
+  if (!questions || !scripts || !followUps || !isRecord(situation) || !isText(situation.title)) return null;
+  return {
+    care,
+    answer: lead || whatsGoingOn,
+    points: [],
+    question: questions[0] ?? "",
+    nextMove,
+    scripts,
+    alternative: "",
+    followUps,
+    title: situation.title,
+  };
 }
 
 /** A clean copy of one of LIFE.EXE's answers, or `null` if the value isn't one. */
 export function readResponse(value: unknown): LifeResponse | null {
   if (!isRecord(value)) return null;
-  const { care, whatsGoingOn, lead, nextMove } = value;
-  const whatMatters = texts(value.whatMatters);
-  const whatsUnclear = texts(value.whatsUnclear);
-  const questions = texts(value.questions);
-  const sayItLikeThis = texts(value.sayItLikeThis);
-  const followUps = texts(value.followUps);
-  const options = Array.isArray(value.options) ? value.options.map(readOption) : null;
-  const situation = readSituation(value.situation);
-  if (!isText(care) || !isText(whatsGoingOn) || !isText(lead) || !isText(nextMove) || !situation) return null;
-  if (!whatMatters || !whatsUnclear || !questions || !sayItLikeThis || !followUps) return null;
-  if (!options?.every((option): option is LifeOption => option !== null)) return null;
-  return { care, whatsGoingOn, whatMatters, whatsUnclear, lead, questions, options, sayItLikeThis, nextMove, followUps, situation };
+  return "answer" in value ? readCurrentResponse(value) : readEarlierResponse(value);
 }
 
 function readTurn(value: unknown, fallbackTime: number): SavedTurn | null {
@@ -130,12 +135,10 @@ function clip(text: string): string {
 }
 
 /** The short summary shown in the list of saved situations. */
-function summarize(turns: SavedTurn[]): Pick<SavedConversation, "title" | "focus"> {
+function summarize(turns: SavedTurn[]): string {
   const answer = turns.findLast((turn): turn is AnswerTurn => turn.role === "assistant");
-  const situation = answer?.response.situation;
   const first = turns.find((turn) => turn.role === "user");
-  const title = clip(situation?.title ?? "") || clip(first?.text ?? "") || "Untitled situation";
-  return { title, focus: situation?.focus ?? null };
+  return clip(answer?.response.title ?? "") || clip(first?.text ?? "") || "Untitled situation";
 }
 
 function readConversation(value: unknown): SavedConversation | null {
@@ -144,11 +147,9 @@ function readConversation(value: unknown): SavedConversation | null {
   }
   const turns = readTurns(value.turns, value.updatedAt);
   if (!turns) return null;
-  const summary = summarize(turns);
   return {
     id: value.id,
-    title: isText(value.title) && value.title.trim() ? clip(value.title) : summary.title,
-    focus: isFocus(value.focus) || value.focus === null ? value.focus : summary.focus,
+    title: isText(value.title) && value.title.trim() ? clip(value.title) : summarize(turns),
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
     turns,
@@ -179,7 +180,8 @@ function load(store: KeyValueStore | null): Loaded {
   }
   if (!isRecord(file)) return { conversations: [], writable: true };
   if (isTime(file.version) && file.version > VERSION) return { conversations: [], writable: false };
-  if (file.version !== VERSION || !Array.isArray(file.conversations)) return { conversations: [], writable: true };
+  const readable = file.version === VERSION || file.version === 1;
+  if (!readable || !Array.isArray(file.conversations)) return { conversations: [], writable: true };
 
   const byId = new Map<string, SavedConversation>();
   for (const value of file.conversations) {
@@ -227,7 +229,7 @@ export function createMemory(local: KeyValueStore | null, session: KeyValueStore
 
     const conversation: SavedConversation = {
       id,
-      ...summarize(kept),
+      title: summarize(kept),
       createdAt: conversations.find((existing) => existing.id === id)?.createdAt ?? now,
       updatedAt: now,
       turns: kept,

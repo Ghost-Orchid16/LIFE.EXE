@@ -12,33 +12,36 @@ function track(chunks: string[]): Stage[] {
 
 describe("createStageTracker", () => {
   it("starts at understanding and follows the answer's fields", () => {
-    assert.deepEqual(track(['{"care":"","whatsGoingOn":"x",', '"whatMatters":["a"],', '"options":[],', '"nextMove":"go"}']), [
+    assert.deepEqual(track(['{"care":"",', '"answer":"Yes.",', '"points":[],"question":"",', '"nextMove":"go"}']), [
       "understanding",
-      "context",
-      "options",
-      "next",
+      "thinking",
+      "answering",
     ]);
   });
 
   it("reports every stage in order when one chunk skips ahead", () => {
-    assert.deepEqual(track(['{"whatMatters":[],"options":[],"nextMove":""']), ["understanding", "context", "options", "next"]);
+    assert.deepEqual(track(['{"care":"","answer":"x","points":[],"question":"","nextMove":""']), [
+      "understanding",
+      "thinking",
+      "answering",
+    ]);
   });
 
   it("notices markers split across chunks", () => {
-    assert.deepEqual(track(['{"whatMat', 'ters": ["a"]']), ["understanding", "context"]);
+    assert.deepEqual(track(['{"care":"","ans', 'wer": "a"']), ["understanding", "thinking"]);
   });
 
   it("ignores field names quoted inside values", () => {
-    assert.deepEqual(track(['{"whatsGoingOn":"You said \\"options\\": none"']), ["understanding"]);
+    assert.deepEqual(track(['{"care":"You said \\"answer\\": none, and \\"nextMove\\": none"']), ["understanding"]);
   });
 
   it("never moves backwards after a new text block", () => {
     const seen: Stage[] = [];
     const tracker = createStageTracker((stage) => seen.push(stage));
-    tracker.push('{"whatMatters":[],"options":[');
+    tracker.push('{"care":"","answer":"x",');
     tracker.resetBlock();
-    tracker.push('{"care":"","whatMatters":[');
-    tracker.push('],"options":[],"nextMove":"x"');
-    assert.deepEqual(seen, ["understanding", "context", "options", "next"]);
+    tracker.push('{"care":"","answer":');
+    tracker.push('"y","points":[],"question":"","nextMove":"z"');
+    assert.deepEqual(seen, ["understanding", "thinking", "answering"]);
   });
 });

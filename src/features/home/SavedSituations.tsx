@@ -1,6 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { ArrowRight, Check } from "../../components/icons.tsx";
-import { FOCUS_META } from "../../lib/focus.ts";
 import type { SavedConversation } from "../../lib/memory.ts";
 import { formatWhen, smarten } from "../../lib/typography.ts";
 
@@ -68,26 +67,18 @@ export function SavedSituations({ conversations, onOpen, onClear }: SavedSituati
         Pick up where you left off
       </h2>
       <ul className="memory__list">
-        {shown.map((conversation) => {
-          const focus = conversation.focus && FOCUS_META[conversation.focus];
-          return (
-            <li key={conversation.id}>
-              <button type="button" className="memory__item" onClick={() => onOpen(conversation.id)}>
-                <span className="memory__title">{smarten(conversation.title)}</span>
-                <span className="memory__meta">
-                  {focus && (
-                    <span className="memory__focus" data-tone={focus.tone}>
-                      {focus.label}
-                    </span>
-                  )}
-                  <span>{replies(conversation)}</span>
-                  <time dateTime={new Date(conversation.updatedAt).toISOString()}>{formatWhen(conversation.updatedAt)}</time>
-                </span>
-                <ArrowRight size={16} className="memory__arrow" />
-              </button>
-            </li>
-          );
-        })}
+        {shown.map((conversation) => (
+          <li key={conversation.id}>
+            <button type="button" className="memory__item" onClick={() => onOpen(conversation.id)}>
+              <span className="memory__title">{smarten(conversation.title)}</span>
+              <span className="memory__meta">
+                <span>{replies(conversation)}</span>
+                <time dateTime={new Date(conversation.updatedAt).toISOString()}>{formatWhen(conversation.updatedAt)}</time>
+              </span>
+              <ArrowRight size={16} className="memory__arrow" />
+            </button>
+          </li>
+        ))}
       </ul>
       <div className="memory__footer">
         {hidden > 0 && (

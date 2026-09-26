@@ -29,8 +29,8 @@ export function Thread({ turns, busy, onRetry, onFollowUp }: ThreadProps) {
             <li key={turn.id} id={`turn-${turn.id}`} className="turn turn--user">
               <span className="turn__marker" aria-hidden="true" />
               <div className="turn__body">
-                <p className="turn__label">{index === 0 ? "The situation" : "You"}</p>
-                <p className={`turn__text${index === 0 && turn.text.length <= 280 ? " turn__text--headline" : ""}`}>{turn.text}</p>
+                <p className="turn__label">You</p>
+                <p className="turn__text">{turn.text}</p>
               </div>
             </li>
           );

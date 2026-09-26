@@ -1,11 +1,11 @@
 import { STAGES, type Stage } from "../shared/contract.ts";
 
-// Each stage starts when the model begins writing the matching field of its JSON answer.
+// Each stage starts when the model begins writing the matching field of its JSON answer: it is
+// "thinking" once it starts its answer, and "answering" once it moves on to the next move and the rest.
 // Only a key followed by a colon counts, so the same word inside a quoted value never matches.
 const STAGE_MARKERS: ReadonlyArray<readonly [Stage, RegExp]> = [
-  ["context", /"whatMatters"\s*:/],
-  ["options", /"options"\s*:/],
-  ["next", /"nextMove"\s*:/],
+  ["thinking", /"answer"\s*:/],
+  ["answering", /"nextMove"\s*:/],
 ];
 
 export interface StageTracker {

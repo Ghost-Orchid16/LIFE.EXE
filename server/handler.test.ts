@@ -42,7 +42,7 @@ describe("POST /api/life", () => {
     const events = await readEvents(response);
     assert.deepEqual(
       events.map((event) => event.type === "stage" ? `stage:${event.stage}` : event.type),
-      ["meta", "stage:understanding", "stage:context", "stage:options", "stage:next", "result"],
+      ["meta", "stage:understanding", "stage:thinking", "stage:answering", "result"],
     );
     assert.deepEqual(events[0], { type: "meta", mode: "demo" });
   });

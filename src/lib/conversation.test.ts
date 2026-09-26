@@ -22,7 +22,7 @@ function thread(exchanges: number): SavedTurn[] {
       id: `a${index + 1}`,
       role: "assistant",
       status: "done",
-      response: sampleResponse({ lead: `Answer ${index + 1}` }),
+      response: sampleResponse({ answer: `Answer ${index + 1}` }),
       mode: "live",
       at: index,
     },
@@ -38,7 +38,7 @@ describe("Conversation context", () => {
     const messages = contextFor(turns);
     assert.equal(messages.length, 7);
     assert.deepEqual(
-      messages.map((message) => (message.role === "user" ? message.content : message.content.lead)),
+      messages.map((message) => (message.role === "user" ? message.content : message.content.answer)),
       ["Message 1", "Answer 1", "Message 2", "Answer 2", "Message 3", "Answer 3", "What should I do first?"],
     );
   });
@@ -49,7 +49,7 @@ describe("Conversation context", () => {
       { id: "u2", role: "user", text: "Message 2", at: 1 },
       { id: "e2", role: "assistant", status: "error", code: "network" },
       ask("Message 3"),
-      { id: "p3", role: "assistant", status: "pending", stage: "context" },
+      { id: "p3", role: "assistant", status: "pending", stage: "thinking" },
     ];
     assert.deepEqual(
       contextFor(turns).map((message) => message.role),
@@ -63,10 +63,10 @@ describe("Conversation context", () => {
 
     assert.ok(messages.length <= LIMITS.maxMessages, `${messages.length} messages`);
     assert.deepEqual(messages[0], { role: "user", content: "Message 1" });
-    assert.equal(messages[1].role === "assistant" && messages[1].content.lead, "Answer 1");
+    assert.equal(messages[1].role === "assistant" && messages[1].content.answer, "Answer 1");
     assert.deepEqual(messages[2], { role: "user", content: "Message 13" });
     assert.deepEqual(messages.at(-1), { role: "user", content: "I talked to them today and things changed." });
-    // The latest answer, with LIFE.EXE's running summary of the situation, is always included.
+    // The latest answer is always included.
     assert.deepEqual(messages.at(-2), { role: "assistant", content: (turns.at(-2) as AnswerTurn).response });
     // And the API accepts it.
     const validation = validateLifeRequest({ messages });

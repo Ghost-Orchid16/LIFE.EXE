@@ -6,6 +6,7 @@ import { handleLifeRequest } from "../../server/handler.ts";
 import { createDemoProvider } from "../../server/providers/demo.ts";
 import { createGeminiProvider } from "../../server/providers/gemini.ts";
 import { readEvents, sampleResponse } from "../../server/test-helpers.ts";
+import { validateLifeRequest } from "../../server/validation.ts";
 import {
   EMPTY_CONVERSATION,
   contextFor,
@@ -65,18 +66,23 @@ const FOLLOW_UP = "It was something they said at a party, and it hurt.";
 const CONTINUE = "I talked to them today and things changed.";
 const JOBS = "I have two job offers and I can't choose between them.";
 
-const friendAnswer = (lead: string) =>
-  sampleResponse({
-    lead,
-    situation: {
-      title: "Talking to a friend about what happened",
-      summary: "Something a friend did hurt, and you're unsure whether to bring it up.",
-      focus: "conversation",
-      matters: ["The friendship", "Being honest"],
-      nextMove: "Decide what you want from the conversation.",
-    },
-  });
-const jobsAnswer = (lead: string) => sampleResponse({ lead });
+const friendAnswer = (answer: string) => sampleResponse({ answer, title: "Talking to a friend about what happened" });
+const jobsAnswer = (answer: string) => sampleResponse({ answer });
+
+/** An answer as the earlier, longer format saved it. */
+const EARLIER_ANSWER = {
+  care: "",
+  whatsGoingOn: "A friend has gone quiet and you're not sure why.",
+  whatMatters: ["The friendship"],
+  whatsUnclear: ["Why they went quiet."],
+  lead: "Send one low-pressure check-in.",
+  questions: [],
+  options: [{ title: "Wait", detail: "Give it a few days.", upside: "No pressure.", tradeoff: "Slower." }],
+  sayItLikeThis: ["Hey, everything okay?"],
+  nextMove: "Message them today.",
+  followUps: ["What if they don't reply?"],
+  situation: { title: "A friend has gone quiet", summary: "Unsure why.", focus: "relationship", matters: [], nextMove: "Message them." },
+};
 
 /**
  * One browser tab, driven the way useConversation drives it: the same reducer and the same memory calls.
@@ -166,7 +172,6 @@ describe("Local memory", () => {
     [saved] = tab.memory.list();
     assert.equal(tab.memory.list().length, 1);
     assert.equal(saved.title, "Talking to a friend about what happened");
-    assert.equal(saved.focus, "conversation");
     assert.equal(saved.createdAt, createdAt);
     // Messages, answers, how each answer was made (live or demo) and when: all of it, as it was.
     assert.deepEqual(saved.turns, tab.state.turns);
@@ -416,7 +421,7 @@ describe("Local memory", () => {
     const file = JSON.parse(browser.local.getItem(MEMORY_KEY)!);
     assert.deepEqual(Object.keys(file), ["version", "conversations"]);
     const [conversation] = file.conversations;
-    assert.deepEqual(Object.keys(conversation).sort(), ["createdAt", "focus", "id", "title", "turns", "updatedAt"]);
+    assert.deepEqual(Object.keys(conversation).sort(), ["createdAt", "id", "title", "turns", "updatedAt"]);
     assert.deepEqual(Object.keys(conversation.turns[0]).sort(), ["at", "id", "role", "text"]);
     assert.deepEqual(Object.keys(conversation.turns[1]).sort(), ["at", "id", "mode", "response", "role", "status"]);
     assert.deepEqual(Object.keys(conversation.turns[1].response).sort(), Object.keys(sampleResponse()).sort());
@@ -452,7 +457,7 @@ describe("Local memory", () => {
       saved.turns.flatMap((turn) => (turn.role === "assistant" ? [turn.mode] : [])),
       ["demo", "demo", "demo"],
     );
-    assert.equal(saved.title, reply.response.situation.title);
+    assert.equal(saved.title, reply.response.title);
   });
 
   it("reads only what it can trust from storage", () => {
@@ -478,7 +483,7 @@ describe("Local memory", () => {
     );
 
     // Memory written by a newer version of LIFE.EXE is left alone rather than overwritten.
-    const newer = JSON.stringify({ version: 2, conversations: [] });
+    const newer = JSON.stringify({ version: 3, conversations: [] });
     browser.local.setItem(MEMORY_KEY, newer);
     const memory = createMemory(browser.local);
     assert.deepEqual(memory.list(), []);
@@ -539,13 +544,69 @@ describe("Local memory", () => {
     });
   });
 
+  it("keeps situations saved in the earlier answer format, and lets them continue", () => {
+    const browser = newBrowser();
+    browser.local.setItem(
+      MEMORY_KEY,
+      JSON.stringify({
+        version: 1,
+        conversations: [
+          {
+            id: "earlier",
+            title: "A friend has gone quiet",
+            focus: "relationship",
+            createdAt: 1,
+            updatedAt: 2,
+            turns: [
+              { id: "u1", role: "user", text: FRIEND, at: 1 },
+              { id: "a1", role: "assistant", status: "done", response: EARLIER_ANSWER, mode: "demo", at: 2 },
+            ],
+          },
+        ],
+      }),
+    );
+
+    const tab = openTab(nextVisit(browser));
+    const [saved] = tab.memory.list();
+    assert.equal(saved.title, "A friend has gone quiet");
+    // Shown in the current format: its lead is the answer, and the next move, wording and follow-ups carry over.
+    assert.deepEqual(saved.turns[1], {
+      id: "a1",
+      role: "assistant",
+      status: "done",
+      mode: "demo",
+      at: 2,
+      response: {
+        care: "",
+        answer: "Send one low-pressure check-in.",
+        points: [],
+        question: "",
+        nextMove: "Message them today.",
+        scripts: ["Hey, everything okay?"],
+        alternative: "",
+        followUps: ["What if they don't reply?"],
+        title: "A friend has gone quiet",
+      },
+    });
+
+    // Continuing it works: the API accepts the history, and it's saved again in the current format.
+    tab.open("earlier");
+    const context = tab.send(CONTINUE);
+    assert.ok(validateLifeRequest({ messages: context }).ok);
+    tab.answer(friendAnswer("Good. What changed?"));
+    const file = JSON.parse(browser.local.getItem(MEMORY_KEY)!);
+    assert.equal(file.version, 2);
+    assert.ok(!JSON.stringify(file).includes("whatsGoingOn"));
+    assert.deepEqual(saidIn(tab.memory.get("earlier")), [FRIEND, CONTINUE]);
+  });
+
   it("brings along a conversation kept by the previous version, in this tab", () => {
     const browser = newBrowser();
     browser.session.setItem(
       LEGACY_SESSION_KEY,
       JSON.stringify([
         { id: "u1", role: "user", text: FRIEND },
-        { id: "a1", role: "assistant", status: "done", response: friendAnswer("Start by deciding."), mode: "live" },
+        { id: "a1", role: "assistant", status: "done", response: EARLIER_ANSWER, mode: "live" },
         { id: "u2", role: "user", text: FOLLOW_UP },
         { id: "e2", role: "assistant", status: "error", code: "network" },
       ]),

@@ -15,7 +15,7 @@ interface CapturedRequest {
 interface JsonSchemaObject {
   additionalProperties: boolean;
   propertyOrdering: string[];
-  properties: Record<string, { propertyOrdering?: string[] }>;
+  properties: Record<string, unknown>;
 }
 
 /** A Gemini streaming response (server-sent events), one event per payload. */
@@ -81,7 +81,7 @@ describe("Gemini provider", () => {
     const expected = sampleResponse();
     const { result, stages, requests } = await run(streamResponse(JSON.stringify(expected)));
     assert.deepEqual(await result, expected);
-    assert.deepEqual(stages, ["understanding", "context", "options", "next"]);
+    assert.deepEqual(stages, ["understanding", "thinking", "answering"]);
 
     const [request] = requests;
     assert.equal(
@@ -103,14 +103,14 @@ describe("Gemini provider", () => {
     assert.equal(schema.additionalProperties, false);
     // Fields must come back in schema order: the progress stages follow them.
     assert.deepEqual(schema.propertyOrdering, Object.keys(schema.properties));
-    assert.deepEqual(schema.propertyOrdering.slice(0, 3), ["care", "whatsGoingOn", "whatMatters"]);
-    assert.deepEqual(schema.properties.situation.propertyOrdering, ["title", "summary", "focus", "matters", "nextMove"]);
+    assert.deepEqual(schema.propertyOrdering.slice(0, 3), ["care", "answer", "points"]);
+    assert.ok(schema.propertyOrdering.indexOf("answer") < schema.propertyOrdering.indexOf("nextMove"));
   });
 
   it("sends earlier answers back as the assistant's turns", async () => {
     const api = fakeApi(streamResponse(JSON.stringify(sampleResponse())));
     const provider = createGeminiProvider(config, { fetch: api.fetch, retry });
-    const previous = sampleResponse({ lead: "Earlier answer." });
+    const previous = sampleResponse({ answer: "Earlier answer." });
     await provider.respond(
       [...conversation, { role: "assistant", content: previous }, { role: "user", content: "Be more direct." }],
       { signal: new AbortController().signal, onStage: () => {} },
@@ -137,8 +137,8 @@ describe("Gemini provider", () => {
   });
 
   it("rejects answers that don't match the schema", async () => {
-    await assert.rejects((await run(streamResponse('{"lead": "only this"}'))).result, { code: "invalid_response" });
-    await assert.rejects((await run(streamResponse('{"lead": "cut off'))).result, { code: "invalid_response" });
+    await assert.rejects((await run(streamResponse('{"answer": "only this"}'))).result, { code: "invalid_response" });
+    await assert.rejects((await run(streamResponse('{"answer": "cut off'))).result, { code: "invalid_response" });
     await assert.rejects((await run(streamResponse(JSON.stringify(sampleResponse()), "MAX_TOKENS"))).result, {
       code: "invalid_response",
     });

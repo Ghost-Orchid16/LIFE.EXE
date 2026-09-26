@@ -12,47 +12,29 @@ export const LIMITS = {
   requestBytes: 400_000,
 } as const;
 
-export const FOCUS_KINDS = [
-  "decision",
-  "conversation",
-  "relationship",
-  "problem",
-  "uncertainty",
-  "setback",
-  "pressure",
-  "support",
-] as const;
-export type Focus = (typeof FOCUS_KINDS)[number];
-
-export interface LifeOption {
-  title: string;
-  detail: string;
-  upside: string;
-  tradeoff: string;
-}
-
-/** The running summary shown beside the conversation. Updated on every turn. */
-export interface SituationSnapshot {
-  title: string;
-  summary: string;
-  focus: Focus;
-  matters: string[];
-  nextMove: string;
-}
-
-/** One structured LIFE.EXE response. Empty strings and arrays mean "nothing to show for this section". */
+/**
+ * One LIFE.EXE answer: what to do, the next move, and the words to use when that helps.
+ * Empty strings and arrays mean "nothing to show", and most answers leave several fields empty.
+ */
 export interface LifeResponse {
+  /** Safety first: a short message pointing to real help when someone may be at risk. Usually empty. */
   care: string;
-  whatsGoingOn: string;
-  whatMatters: string[];
-  whatsUnclear: string[];
-  lead: string;
-  questions: string[];
-  options: LifeOption[];
-  sayItLikeThis: string[];
+  /** The direct answer, in a few sentences. */
+  answer: string;
+  /** A few short points, only when they genuinely help. */
+  points: string[];
+  /** One clarifying question, only when the advice depends on it. */
+  question: string;
+  /** The most practical thing to do now. */
   nextMove: string;
+  /** Words they could actually use, only when wording helps. */
+  scripts: string[];
+  /** Another approach, only when a real trade-off makes it worth mentioning. */
+  alternative: string;
+  /** Two or three things the person might want to ask next, in their own voice. */
   followUps: string[];
-  situation: SituationSnapshot;
+  /** A short name for the situation, used to list saved situations. Never shown with the answer. */
+  title: string;
 }
 
 export type ChatMessage =
@@ -63,7 +45,7 @@ export interface LifeRequest {
   messages: ChatMessage[];
 }
 
-export const STAGES = ["understanding", "context", "options", "next"] as const;
+export const STAGES = ["understanding", "thinking", "answering"] as const;
 export type Stage = (typeof STAGES)[number];
 
 export type Mode = "live" | "demo";

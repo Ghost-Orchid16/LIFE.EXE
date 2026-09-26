@@ -1,12 +1,10 @@
 import { STAGES, type Stage } from "../../../shared/contract.ts";
 import { Check } from "../../components/icons.tsx";
-import type { Tone } from "../../lib/focus.ts";
 
-const STAGE_INFO: Record<Stage, { label: string; status: string; tone: Tone }> = {
-  understanding: { label: "Understanding", status: "Understanding the situation…", tone: "blue" },
-  context: { label: "Context", status: "Figuring out what matters…", tone: "cyan" },
-  options: { label: "Options", status: "Exploring your options…", tone: "coral" },
-  next: { label: "Next move", status: "Building a practical next step…", tone: "lime" },
+const STAGE_INFO: Record<Stage, { label: string; status: string; tone: "blue" | "cyan" | "lime" }> = {
+  understanding: { label: "Understanding", status: "Reading what's going on…", tone: "blue" },
+  thinking: { label: "Thinking", status: "Working out what to do…", tone: "cyan" },
+  answering: { label: "Preparing answer", status: "Putting your answer together…", tone: "lime" },
 };
 
 /**

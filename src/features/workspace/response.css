@@ -1,23 +1,20 @@
 /* ---------- A LIFE.EXE answer ---------- */
+/* One strong answer, one highlighted next move, and quick follow-ups. Everything else stays quiet. */
 
 .response {
   display: grid;
-  gap: 26px;
+  gap: 20px;
 }
 
 .response > * {
-  animation: rise 0.55s var(--ease) both;
+  animation: rise 0.5s var(--ease) both;
 }
 
-/* Sections arrive one after another. */
-.response > :nth-child(3) { animation-delay: 60ms; }
-.response > :nth-child(4) { animation-delay: 120ms; }
-.response > :nth-child(5) { animation-delay: 180ms; }
-.response > :nth-child(6) { animation-delay: 240ms; }
-.response > :nth-child(7) { animation-delay: 300ms; }
-.response > :nth-child(8) { animation-delay: 360ms; }
-.response > :nth-child(9) { animation-delay: 420ms; }
-.response > :nth-child(n + 10) { animation-delay: 480ms; }
+/* Parts arrive one after another, quickly. */
+.response > :nth-child(4) { animation-delay: 50ms; }
+.response > :nth-child(5) { animation-delay: 100ms; }
+.response > :nth-child(6) { animation-delay: 150ms; }
+.response > :nth-child(n + 7) { animation-delay: 200ms; }
 
 @keyframes rise {
   from {
@@ -48,235 +45,76 @@
   line-height: 1.7;
 }
 
-.response__lead {
+/* The answer: the first thing the eye lands on. */
+.response__answer {
+  display: grid;
+  gap: 12px;
   max-width: 34em;
-  margin-top: -10px;
+  margin-top: -8px;
   font-family: var(--font-display);
-  font-size: clamp(1.28rem, 1.14rem + 0.6vw, 1.58rem);
-  font-weight: 650;
-  line-height: 1.3;
-  letter-spacing: -0.02em;
+  font-size: clamp(1.22rem, 1.1rem + 0.5vw, 1.46rem);
+  font-weight: 620;
+  line-height: 1.34;
+  letter-spacing: -0.018em;
   text-wrap: pretty;
 }
 
-.response__section {
-  display: grid;
-  align-content: start;
-  gap: 10px;
-  min-width: 0;
-}
-
-.response__text {
-  max-width: 40em;
-  font-size: 1.03rem;
-}
-
-.response__pair {
-  display: grid;
-  gap: 26px;
-}
-
-@media (min-width: 640px) {
-  .response__pair:has(> :nth-child(2)) {
-    grid-template-columns: 1fr 1fr;
-    gap: 32px;
-  }
-}
-
-.response__list {
-  display: grid;
-  gap: 9px;
-  font-size: 0.98rem;
-  line-height: 1.5;
-}
-
-.response__list li {
-  position: relative;
-  padding-left: 20px;
-}
-
-.response__list li::before {
-  content: "";
-  position: absolute;
-  top: 0.68em;
-  left: 0;
-  width: 9px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--tone);
-}
-
-.response__list--unclear li::before {
-  content: "?";
-  top: 0;
-  width: auto;
-  height: auto;
-  background: none;
-  color: var(--violet-ink);
-  font-family: var(--font-mono);
-  font-weight: 700;
-}
-
-/* Clarifying questions */
-
-.response__questions ul {
-  display: grid;
-  gap: 8px;
-}
-
-.response__questions li {
-  padding: 13px 16px;
-  border: 1px solid color-mix(in srgb, var(--violet) 30%, transparent);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--violet) 8%, var(--surface));
-  font-size: 1.05rem;
-  font-weight: 560;
-  line-height: 1.45;
-}
-
-/* Options */
-
-.options {
-  display: grid;
-  gap: 12px;
-}
-
-.option {
-  padding: 18px 20px;
-  border: 1px solid var(--line-2);
-  border-radius: 18px;
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
-  transition: border-color 0.2s var(--ease);
-}
-
-.option:hover {
-  border-color: color-mix(in srgb, var(--coral) 50%, var(--line-2));
-}
-
-.option__head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.option__letter {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--coral) 14%, transparent);
-  color: var(--coral-ink);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  font-weight: 700;
-}
-
-.option__title {
-  font-family: var(--font-display);
-  font-size: 1.12rem;
-  font-weight: 700;
-  line-height: 1.25;
-  letter-spacing: -0.015em;
-}
-
-.option__detail {
-  margin-top: 8px;
+/* A longer answer continues as body text, so only its opening reads as the headline. */
+.response__answer p + p {
   color: var(--ink-2);
-  font-size: 0.98rem;
+  font-family: var(--font-body);
+  font-size: 1.04rem;
+  font-weight: 450;
+  line-height: 1.6;
+  letter-spacing: 0;
 }
 
-.option__meta {
-  display: grid;
-  gap: 12px;
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px dashed var(--line-2);
-}
-
-@media (min-width: 560px) {
-  .option__meta {
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-  }
-}
-
-.option__meta dt {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.option__meta dt::before {
-  display: grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 5px;
-  font-size: 0.8rem;
-  line-height: 1;
-}
-
-.option__upside dt {
-  color: var(--lime-ink);
-}
-
-.option__upside dt::before {
-  content: "+";
-  background: color-mix(in srgb, var(--lime) 30%, transparent);
-}
-
-.option__tradeoff dt {
-  color: var(--coral-ink);
-}
-
-.option__tradeoff dt::before {
-  content: "\2212";
-  background: color-mix(in srgb, var(--coral) 16%, transparent);
-}
-
-.option__meta dd {
-  margin-top: 4px;
-  font-size: 0.93rem;
-  line-height: 1.5;
-}
-
-/* Words to use */
-
-.phrases {
+.response__points {
   display: grid;
   gap: 8px;
-}
-
-.phrases li {
-  padding: 12px 16px;
-  border-left: 3px solid var(--cyan);
-  border-radius: 4px 14px 14px 4px;
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  max-width: 38em;
   font-size: 1.02rem;
   line-height: 1.5;
 }
 
-.phrases q {
-  quotes: "\201C" "\201D" "\2018" "\2019";
+.response__points li {
+  position: relative;
+  padding-left: 20px;
 }
 
-/* Next move */
+.response__points li::before {
+  content: "";
+  position: absolute;
+  top: 0.7em;
+  left: 2px;
+  width: 8px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ink-3);
+}
+
+.response__question {
+  max-width: 36em;
+  padding: 2px 0 2px 16px;
+  border-left: 3px solid var(--violet);
+  font-size: 1.08rem;
+  font-weight: 580;
+  line-height: 1.45;
+}
+
+/* Next move: the one highlighted action. */
 
 .next-move {
-  padding: 18px 20px 20px;
-  border: 1px solid var(--next-border);
-  border-radius: 18px;
+  --tone: var(--lime);
+  display: grid;
+  gap: 8px;
+  max-width: 40em;
+  padding: 16px 20px 18px;
+  border-radius: 16px;
   background: var(--next-bg);
-  box-shadow: var(--next-glow);
+  box-shadow:
+    inset 0 0 0 1px var(--next-border),
+    var(--next-glow);
 }
 
 .next-move .kicker {
@@ -284,23 +122,59 @@
 }
 
 .next-move__text {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  font-size: 1.1rem;
+  font-size: 1.08rem;
   font-weight: 560;
   line-height: 1.45;
 }
 
-.next-move__arrow {
-  flex: none;
-  margin-top: 0.2em;
-  color: var(--lime-ink);
+.scripts {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.scripts__label {
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+
+.scripts ul {
+  display: grid;
+  gap: 8px;
+}
+
+.scripts li {
+  padding: 10px 14px;
+  border-left: 3px solid var(--lime);
+  border-radius: 4px 12px 12px 4px;
+  background: var(--surface);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.scripts q {
+  quotes: "\201C" "\201D" "\2018" "\2019";
+}
+
+.response__alternative {
+  max-width: 40em;
+  color: var(--ink-2);
+  font-size: 0.96rem;
+  line-height: 1.5;
+}
+
+.response__alternative-label {
+  color: var(--ink);
+  font-weight: 650;
 }
 
 /* Safety note */
 
 .response__care {
+  --tone: var(--coral);
+  display: grid;
+  gap: 8px;
+  max-width: 40em;
   padding: 16px 18px;
   border: 1px solid var(--care-border);
   border-radius: 16px;
@@ -344,13 +218,16 @@
   transition: color 0.18s var(--ease);
 }
 
-.followup:hover:not(:disabled) {
-  border-color: var(--blue);
-  color: var(--blue-ink);
-}
+/* Only where there's a real pointer: on touch screens, hover sticks to whatever ends up under a finger. */
+@media (hover: hover) {
+  .followup:hover:not(:disabled) {
+    border-color: var(--blue);
+    color: var(--blue-ink);
+  }
 
-.followup:hover:not(:disabled)::before {
-  color: var(--blue-ink);
+  .followup:hover:not(:disabled)::before {
+    color: var(--blue-ink);
+  }
 }
 
 .followup:disabled {
@@ -360,12 +237,11 @@
 /* ---------- Processing sequence ---------- */
 
 .processing {
-  max-width: 440px;
-  padding: 16px 20px 16px 18px;
-  border: 1px solid var(--line-2);
-  border-radius: 18px;
+  max-width: 400px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
   animation: rise 0.4s var(--ease) both;
 }
 

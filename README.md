@@ -2,7 +2,9 @@
 
 **Life didn't come with a manual. Figure it out.**
 
-LIFE.EXE is a small decision-support tool for real-life situations. You describe what's going on in your own words, and it helps you understand the situation, explore realistic options, and pick a practical next step. Then you keep talking it through: push back, add details, or ask for help with what to say.
+LIFE.EXE is a small decision-support tool for real-life situations. You describe what's going on in your own words, and it tells you what it would do and what to do next, without explaining your situation back to you. Then you keep talking it through: push back, add details, or ask for help with what to say.
+
+The idea: **complexity in, thinking behind the scenes, simplicity out.**
 
 ![LIFE.EXE home page in light mode](docs/home-light.png)
 
@@ -11,9 +13,11 @@ LIFE.EXE is a small decision-support tool for real-life situations. You describe
 ## How it works
 
 1. **You explain the situation.** No categories or forms, just plain language.
-2. **LIFE.EXE works through it.** It separates facts from assumptions, figures out what matters and what's still unclear, and weighs a few realistic approaches. While it works you see its progress (Understanding → Context → Options → Next move), never its private reasoning.
-3. **You get a structured answer:** what's going on, what matters, what's unclear, two or three options with their upside and trade-off, and one concrete next move. If something important is missing, it asks one short question instead of guessing.
-4. **You continue the conversation.** Follow-ups stay part of the same situation, and the panel beside the conversation keeps a running summary of the situation, the current focus, and the next move. Conversations are saved in your browser, so you can come back to a situation later and pick it up where you left off.
+2. **LIFE.EXE thinks it through, quietly.** It works out what you're really asking, what you know versus what you're assuming, and which approach is most practical. You see its progress (Understanding → Thinking → Preparing answer), never its reasoning.
+3. **You get a short answer:** what it would do, one practical **next move**, the words to use when wording helps (like a message to send), and two or three follow-ups you can tap. Longer answers, a few bullet points or an alternative only appear when the situation genuinely calls for them. If one missing detail would change the advice, it asks one short question.
+4. **You continue the conversation.** Tap a follow-up or type your own; it stays part of the same situation. Conversations are saved in your browser, so you can come back to a situation later and pick it up where you left off.
+
+For example, "my friend hasn't talked to me in a few days, should I msg him again?" gets: *Yes — send one casual check-in, then give them some space.* Next move: *Send one short message today, then wait a day or two before reading anything into the silence.* Try: *"Hey, haven't heard from you in a bit. Everything okay?"*
 
 LIFE.EXE doesn't diagnose, doesn't claim to know what other people think, and points to real-world help when a situation is serious. If someone may be in danger, safety comes first.
 
@@ -57,7 +61,7 @@ The key is only ever read on the server (the Netlify Function, or the local dev 
 
 When no `GEMINI_API_KEY` is set, LIFE.EXE answers with pre-written responses instead of calling an AI. This keeps the app usable for demonstrations without a key or an internet connection to the AI.
 
-- Demo responses cover six common situations (a career choice, a friend who's gone quiet, a difficult conversation, two opportunities, a decision you regret, and your wants versus other people's expectations), a general fallback, and follow-ups like "Can you be more direct?" or "What should I do first?".
+- Demo responses cover six common situations (a career choice, a friend who's gone quiet, a difficult conversation, two opportunities, a decision you regret, and your wants versus other people's expectations) and a general fallback, in the same short format as live answers. Every follow-up button they offer has its own pre-written reply, and common follow-ups like "Can you be more direct?" or "What should I do first?" work too. Anything else gets an honest "demo mode can't adapt to new details" reply.
 - If a message suggests someone may be in danger, demo mode always responds with a support message pointing to emergency services and crisis lines.
 - Demo mode is always labelled: a **Demo mode** badge in the header, a note under the input, and a **Demo response** tag on every answer. Demo answers are never presented as live AI.
 
@@ -68,7 +72,7 @@ LIFE.EXE remembers conversations in the browser, so someone coming back on the s
 - **What's saved, and where.** Each situation is saved in the browser's `localStorage` (key `lifeexe-memory`, a small versioned JSON document): its ID, the messages and LIFE.EXE's answers with their timestamps, when it was started and last updated, and a short summary (LIFE.EXE's title for the situation). Two small keys remember which situation was open (`lifeexe-last-open` in localStorage, `lifeexe-open` per tab in sessionStorage). Nothing else is stored: no API keys, no configuration, no error details.
 - **Coming back.** Opening LIFE.EXE again, after a reload or days later, reopens the situation you were in, as you left it, so you can simply keep typing. (A reply that was still being written when you left shows as interrupted, with **Try again**.) Nothing is sent when the page opens: a request is only made when you send a message.
 - **Other situations.** **New situation** goes back to the home page, where saved situations are listed under the input ("Pick up where you left off"); choose one to continue it.
-- **Separate situations stay separate.** "New situation" starts a fresh conversation and keeps the previous one saved. When you continue a situation, only that conversation goes with your message, the same way it always has; other situations are never sent. A very long thread is trimmed to the API's limit of 40 messages by keeping its opening exchange and its most recent messages. Every answer includes LIFE.EXE's running summary of the situation, so the recent answers still carry what the middle said.
+- **Separate situations stay separate.** "New situation" starts a fresh conversation and keeps the previous one saved. When you continue a situation, only that conversation goes with your message, the same way it always has; other situations are never sent. A very long thread is trimmed to the API's limit of 40 messages by keeping its opening exchange (where the situation was first described) and its most recent messages.
 - **Clear local memory.** The link under the list of saved situations deletes every saved situation from the browser, after asking you to confirm. It doesn't touch the theme, the server, or the Gemini configuration.
 - **Limits.** Memory keeps the 50 most recently used situations, and makes room the same way if the browser's storage fills up. If the browser blocks storage, LIFE.EXE still works; conversations just aren't saved.
 
@@ -110,7 +114,7 @@ server/                     API layer and AI service (no browser code)
 shared/contract.ts          Types and limits shared by the browser and the server
 src/                        The React app
   features/home/            Home page: the situation input, saved situations, how it works, about
-  features/workspace/       Conversation, processing sequence, situation panel, composer
+  features/workspace/       Conversation, answers, processing sequence, composer
   hooks/                    Conversation state, theme, media queries
   lib/                      API client, conversation state, local memory, error messages, formatting
   styles/                   Design tokens (light and dark) and base styles
@@ -121,10 +125,26 @@ src/                        The React app
 ```
 Browser ──POST /api/life──▶ handler ──▶ provider (Gemini or demo) ──▶ structured answer
    ▲                          │
-   └──── server-sent events ──┘   meta → stage (×4) → result | error
+   └──── server-sent events ──┘   meta → stage (×3) → result | error
 ```
 
 With each message the browser sends the conversation being continued, and only that one; nothing is stored on the server. Conversations are saved in the browser instead (see [Conversation memory](#conversation-memory)).
+
+### The answer format
+
+Every answer, live or demo, has the same shape (`LifeResponse` in `shared/contract.ts`), validated on the server by `server/schema.ts`. Empty strings and lists mean "nothing to show", and most answers leave several of them empty.
+
+| Field         | What it's for                                                              |
+| ------------- | -------------------------------------------------------------------------- |
+| `answer`      | The direct answer, usually one to four sentences                            |
+| `nextMove`    | The single most practical thing to do now                                   |
+| `scripts`     | Words to use, only when wording helps (up to three)                         |
+| `followUps`   | Two or three things to ask next, shown as buttons                           |
+| `points`      | A few short points, only when they genuinely help (up to four)              |
+| `alternative` | Another approach, only when a real trade-off makes it worth mentioning      |
+| `question`    | One clarifying question, only when the advice depends on it                 |
+| `care`        | A safety note pointing to real help, only when someone may be at risk       |
+| `title`       | A short name for the situation, shown only in the list of saved situations  |
 
 ### Switching AI providers
 
