@@ -1,0 +1,130 @@
+/* LIFE.EXE design tokens.
+   Light: warm paper surfaces, near-black ink, bright accents used with intent.
+   Dark: deep midnight surfaces, warm off-white ink, the same accents lifted for contrast.
+   Accent roles stay fixed across the product:
+     blue   → understanding (what's going on)     cyan   → context (what matters)
+     coral  → options and trade-offs              lime   → the next move
+     violet → what's unclear / questions (used sparingly) */
+
+:root {
+  color-scheme: light;
+
+  --bg: #f3efe7;
+  --surface: #fbf9f4;
+  --surface-2: #f6f2ea;
+  --surface-3: #ebe5d9;
+  --ink: #16181d;
+  --ink-2: #454952;
+  --ink-3: #676b74;
+  --line: rgb(22 24 29 / 0.1);
+  --line-2: rgb(22 24 29 / 0.17);
+
+  --blue: #2b4dff;
+  --blue-ink: #2440d9;
+  --cyan: #00b3c7;
+  --cyan-ink: #006f7c;
+  --coral: #ff5e3a;
+  --coral-ink: #bf3a18;
+  --lime: #b8f03a;
+  --lime-ink: #456d00;
+  --violet: #7b61ff;
+  --violet-ink: #5438db;
+
+  --wash-1: rgb(43 77 255 / 0.1);
+  --wash-2: rgb(184 240 58 / 0.2);
+  --wash-3: rgb(255 94 58 / 0.08);
+  --grid-dot: rgb(22 24 29 / 0.07);
+
+  --btn-bg: #16181d;
+  --btn-fg: #fbf9f4;
+  --btn-bg-hover: #2a2d35;
+  --btn-arrow-bg: #b8f03a;
+  --btn-arrow-fg: #16181d;
+
+  --mark-tile: #16181d;
+  --mark-stroke: #fbf9f4;
+  --mark-dot: #b8f03a;
+
+  --highlight-bg: #b8f03a;
+  --highlight-fg: #16181d;
+
+  --next-bg: #eef7d6;
+  --next-border: rgb(69 109 0 / 0.22);
+  --next-glow: 0 1px 0 rgb(255 255 255 / 0.6) inset;
+  --care-bg: #ffece4;
+  --care-border: rgb(191 58 24 / 0.22);
+  --chip-bg: rgb(251 249 244 / 0.8);
+
+  --shadow-sm: 0 1px 2px rgb(22 24 29 / 0.06);
+  --shadow-md: 0 1px 2px rgb(22 24 29 / 0.05), 0 10px 28px -12px rgb(22 24 29 / 0.16);
+  --shadow-lg: 0 2px 6px rgb(22 24 29 / 0.04), 0 28px 60px -24px rgb(22 24 29 / 0.28);
+  --ring: 0 0 0 3px rgb(43 77 255 / 0.28);
+  --header-bg: rgb(243 239 231 / 0.88);
+
+  --font-display: "Bricolage Grotesque Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Instrument Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --header-h: 64px;
+  --ease: cubic-bezier(0.22, 0.8, 0.2, 1);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg: #10131a;
+  --surface: #171b24;
+  --surface-2: #1b202a;
+  --surface-3: #252b37;
+  --ink: #efebe3;
+  --ink-2: #bdb9b1;
+  --ink-3: #8f8e93;
+  --line: rgb(239 235 227 / 0.09);
+  --line-2: rgb(239 235 227 / 0.16);
+
+  --blue: #6b84ff;
+  --blue-ink: #93a5ff;
+  --cyan: #2fd9eb;
+  --cyan-ink: #66e3f1;
+  --coral: #ff7a59;
+  --coral-ink: #ff9d84;
+  --lime: #c6f35c;
+  --lime-ink: #c6f35c;
+  --violet: #9b87ff;
+  --violet-ink: #b6a8ff;
+
+  --wash-1: rgb(107 132 255 / 0.13);
+  --wash-2: rgb(198 243 92 / 0.07);
+  --wash-3: rgb(255 122 89 / 0.07);
+  --grid-dot: rgb(239 235 227 / 0.05);
+
+  --btn-bg: #c6f35c;
+  --btn-fg: #10131a;
+  --btn-bg-hover: #d4f77f;
+  --btn-arrow-bg: #10131a;
+  --btn-arrow-fg: #c6f35c;
+
+  --mark-tile: #262c3a;
+  --mark-stroke: #efebe3;
+  --mark-dot: #c6f35c;
+
+  --highlight-bg: transparent;
+  --highlight-fg: #c6f35c;
+
+  --next-bg: rgb(198 243 92 / 0.07);
+  --next-border: rgb(198 243 92 / 0.3);
+  --next-glow: 0 0 0 1px rgb(198 243 92 / 0.04), 0 12px 40px -18px rgb(198 243 92 / 0.35);
+  --care-bg: rgb(255 122 89 / 0.1);
+  --care-border: rgb(255 122 89 / 0.32);
+  --chip-bg: rgb(23 27 36 / 0.8);
+
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-md: 0 1px 2px rgb(0 0 0 / 0.3), 0 12px 32px -14px rgb(0 0 0 / 0.6);
+  --shadow-lg: 0 2px 6px rgb(0 0 0 / 0.3), 0 30px 70px -26px rgb(0 0 0 / 0.75);
+  --ring: 0 0 0 3px rgb(107 132 255 / 0.4);
+  --header-bg: rgb(16 19 26 / 0.88);
+}

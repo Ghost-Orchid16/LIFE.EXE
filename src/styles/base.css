@@ -1,0 +1,213 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--bg);
+  scroll-padding-top: calc(var(--header-h) + 16px);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  font-kerning: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Soft color washes and a faint dot grid: a nod to squared manual paper, never loud. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at -10% -10%, var(--wash-1), transparent 60%),
+    radial-gradient(50rem 36rem at 110% 0%, var(--wash-2), transparent 60%),
+    radial-gradient(50rem 40rem at 60% 120%, var(--wash-3), transparent 60%),
+    radial-gradient(circle at 1px 1px, var(--grid-dot) 1px, transparent 1.5px) 0 0 / 24px 24px;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 55%, rgb(0 0 0 / 0.35) 100%);
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure {
+  margin: 0;
+}
+
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+svg {
+  display: block;
+}
+
+::selection {
+  background: var(--lime);
+  color: #16181d;
+}
+
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 3px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--gutter);
+  top: 8px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: var(--bg);
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-160%);
+  transition: transform 0.2s var(--ease);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+}
+
+.container {
+  width: min(100% - 2 * var(--gutter), 1180px);
+  margin-inline: auto;
+}
+
+/* Never let a stray wide element zoom the whole page out on a phone. `clip` keeps sticky positioning working. */
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: clip;
+}
+
+/* Accent roles, applied with data-tone on any element. */
+[data-tone="blue"] {
+  --tone: var(--blue);
+  --tone-ink: var(--blue-ink);
+}
+[data-tone="cyan"] {
+  --tone: var(--cyan);
+  --tone-ink: var(--cyan-ink);
+}
+[data-tone="coral"] {
+  --tone: var(--coral);
+  --tone-ink: var(--coral-ink);
+}
+[data-tone="lime"] {
+  --tone: var(--lime);
+  --tone-ink: var(--lime-ink);
+}
+[data-tone="violet"] {
+  --tone: var(--violet);
+  --tone-ink: var(--violet-ink);
+}
+
+/* Small monospace section label with a colored marker. */
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.kicker::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--tone, var(--ink-3));
+  flex: none;
+}
+
+/* Views fade up gently when they appear. */
+@keyframes view-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* Smooth theme switching: transitions are enabled only while the theme is changing. */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition:
+    background-color 0.35s var(--ease),
+    border-color 0.35s var(--ease),
+    color 0.35s var(--ease),
+    fill 0.35s var(--ease),
+    stroke 0.35s var(--ease),
+    box-shadow 0.35s var(--ease) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
