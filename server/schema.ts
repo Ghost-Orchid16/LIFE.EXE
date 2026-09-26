@@ -35,11 +35,9 @@ type Parsed = z.infer<typeof lifeResponseSchema>;
 const assertSameShape = (value: Parsed): LifeResponse => value;
 void assertSameShape;
 
-// Sent as a plain JSON-schema format rather than through the SDK's zod helper: that helper turns
-// `enum` into a description (so `focus` wouldn't be enforced), and its auto-parse would read the
-// first text block, while after a server-side fallback the answer is in the last one.
+// The same schema as plain JSON Schema, sent to the model as its output format.
 const { $schema: _dialect, ...schema } = z.toJSONSchema(lifeResponseSchema);
-export const RESPONSE_FORMAT = { type: "json_schema" as const, schema };
+export const RESPONSE_SCHEMA = schema;
 
 const CAPS = {
   whatMatters: 4,

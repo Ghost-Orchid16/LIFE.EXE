@@ -7,8 +7,8 @@ import {
   type StreamEvent,
 } from "../shared/contract.ts";
 import { readConfig, type Env } from "./config.ts";
-import { createAnthropicProvider } from "./providers/anthropic.ts";
 import { createDemoProvider } from "./providers/demo.ts";
+import { createGeminiProvider } from "./providers/gemini.ts";
 import { LifeError, type LifeProvider } from "./providers/types.ts";
 import { validateLifeRequest } from "./validation.ts";
 
@@ -19,7 +19,7 @@ const RESPONSE_DEADLINE_MS = 27_000;
 /** Live AI when a key is configured, otherwise the clearly labelled demo. */
 export function createProvider(env: Env): LifeProvider {
   const config = readConfig(env);
-  return config.apiKey ? createAnthropicProvider({ ...config, apiKey: config.apiKey }) : createDemoProvider();
+  return config.apiKey ? createGeminiProvider({ ...config, apiKey: config.apiKey }) : createDemoProvider();
 }
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };

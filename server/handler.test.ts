@@ -20,12 +20,12 @@ const failingProvider = (code: LifeError["code"]): LifeProvider => ({
 
 describe("GET /api/life", () => {
   it("reports demo mode when no key is configured", async () => {
-    const response = await handleLifeRequest(new Request(URL), { AI_API_KEY: "  " });
+    const response = await handleLifeRequest(new Request(URL), { GEMINI_API_KEY: "  " });
     assert.deepEqual(await response.json(), { mode: "demo" });
   });
 
   it("reports live mode when a key is configured", async () => {
-    const response = await handleLifeRequest(new Request(URL), { AI_API_KEY: "sk-test" });
+    const response = await handleLifeRequest(new Request(URL), { GEMINI_API_KEY: "test-key" });
     assert.deepEqual(await response.json(), { mode: "live" });
   });
 });

@@ -6,7 +6,7 @@ import { API_PATH } from "./shared/contract.ts";
 
 /**
  * Serves the same API handler as the Netlify Function during `npm run dev` and `npm run preview`,
- * so the whole app runs locally with a single command. Server variables such as AI_API_KEY are
+ * so the whole app runs locally with a single command. Server variables such as GEMINI_API_KEY are
  * read from `.env` here and are never exposed to the browser bundle.
  */
 function lifeApi(): Plugin {
