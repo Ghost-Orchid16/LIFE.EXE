@@ -44,28 +44,26 @@
   transform: translateY(-1px);
 }
 
-/* The main call to action: FIGURE IT OUT → */
+/* The main call to action: Figure it out → */
 .btn-primary {
   display: inline-flex;
   align-items: center;
-  gap: 14px;
-  min-height: 52px;
-  padding: 8px 8px 8px 22px;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 6px 6px 18px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 14px;
   background: var(--btn-bg);
   color: var(--btn-fg);
-  font-family: var(--font-display);
   font-size: 0.98rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: -0.005em;
   white-space: nowrap;
   box-shadow: var(--shadow-md);
   transition:
-    background-color 0.2s var(--ease),
-    transform 0.2s var(--ease),
-    box-shadow 0.2s var(--ease);
+    background-color 0.18s var(--ease),
+    transform 0.18s var(--ease),
+    box-shadow 0.18s var(--ease);
 }
 
 .btn-primary:hover {
@@ -83,14 +81,14 @@
   place-items: center;
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: 10px;
   background: var(--btn-arrow-bg);
   color: var(--btn-arrow-fg);
-  transition: transform 0.25s var(--ease);
+  transition: transform 0.35s var(--ease);
 }
 
 .btn-primary:hover .btn-primary__arrow {
-  transform: translateX(3px);
+  transform: translateX(2px);
 }
 
 /* ---------- Header ---------- */
@@ -100,8 +98,9 @@
   top: 0;
   z-index: 20;
   background: var(--header-bg);
-  backdrop-filter: saturate(1.4) blur(14px);
+  /* Prefixed first: the minifier keeps only the last of the pair, and Chrome and Firefox need the standard one. */
   -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  backdrop-filter: saturate(1.4) blur(14px);
   border-bottom: 1px solid transparent;
   transition: border-color 0.2s var(--ease);
 }

@@ -187,6 +187,22 @@ svg {
   }
 }
 
+/* Entrance: an element rises into place when it first appears, --i steps (70ms each) after the first.
+   Only opacity and transform move, so nothing around it shifts. It holds its starting state through the
+   delay but not beyond the end, so a finished entrance leaves no stacking context behind (which would
+   also stop frosted glass inside it from blurring what's behind). */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+}
+
+.rise {
+  animation: rise-in 0.9s var(--ease) backwards;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
 /* Smooth theme switching: transitions are enabled only while the theme is changing. */
 .theme-transition,
 .theme-transition *,
@@ -209,5 +225,10 @@ svg {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* Shown straight away, rather than held back for the length of the stagger. */
+  .rise {
+    animation: none !important;
   }
 }

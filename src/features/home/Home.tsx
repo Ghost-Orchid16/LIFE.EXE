@@ -30,39 +30,26 @@ export function Home({ mode, saved, onStart, onOpen, onClearMemory }: HomeProps)
   return (
     <main id="main" className="home">
       <section className="hero container" aria-labelledby="hero-title">
-        <p className="hero__eyebrow">
+        <p className="hero__eyebrow rise">
           <span className="hero__eyebrow-dot" aria-hidden="true" />
           For when you don't know what to do next
         </p>
-        <h1 id="hero-title" className="hero__title">
-          Life didn't come with a manual. <span className="hero__highlight">Figure it out.</span>
+        <h1 id="hero-title" className="hero__title rise">
+          Life didn't come with a manual.<br className="hero__break" /> <span className="hero__highlight">Figure it out.</span>
         </h1>
-        <p className="hero__lede">
-          Describe what's going on in your own words. LIFE.EXE thinks it through and tells you what to do next.
+        <p className="hero__lede rise">
+          Describe what's going on in your own words.<br className="hero__break" /> LIFE.EXE thinks it through and tells
+          you what to do next.
         </p>
 
-        <div className="hero__workbench">
-          <div className="hero__input">
-            <SituationForm onSubmit={onStart} />
-            <p className="hero__notes">
-              <span>No account. Conversations are saved in this browser.</span>
-              {mode === "demo" && (
-                <span className="hero__demo-note">Demo mode: responses are pre-written examples, not live AI.</span>
-              )}
-            </p>
-          </div>
-          <ul className="readout" aria-label="What LIFE.EXE does">
-            {PHILOSOPHY.map(({ from, to, tone }) => (
-              <li key={from} className="readout__row" data-tone={tone}>
-                <span className="readout__from">{from}</span>
-                <span className="readout__arrow" aria-hidden="true">
-                  →
-                </span>
-                <span className="visually-hidden"> becomes </span>
-                <span className="readout__to">{to}</span>
-              </li>
-            ))}
-          </ul>
+        <div className="hero__input">
+          <SituationForm onSubmit={onStart} />
+          <p className="hero__notes rise">
+            <span>No account. Conversations are saved in this browser.</span>
+            {mode === "demo" && (
+              <span className="hero__demo-note">Demo mode: responses are pre-written examples, not live AI.</span>
+            )}
+          </p>
         </div>
 
         <SavedSituations conversations={saved} onOpen={onOpen} onClear={onClearMemory} />
@@ -72,6 +59,18 @@ export function Home({ mode, saved, onStart, onOpen, onClearMemory }: HomeProps)
         <h2 id="how-title" className="kicker">
           How it works
         </h2>
+        <ul className="readout" aria-label="What LIFE.EXE does">
+          {PHILOSOPHY.map(({ from, to, tone }) => (
+            <li key={from} className="readout__row" data-tone={tone}>
+              <span className="readout__from">{from}</span>
+              <span className="readout__arrow" aria-hidden="true">
+                →
+              </span>
+              <span className="visually-hidden"> becomes </span>
+              <span className="readout__to">{to}</span>
+            </li>
+          ))}
+        </ul>
         <ol className="how__steps">
           {STEPS.map(({ title, text, tone }, index) => (
             <li key={title} className="how__step" data-tone={tone}>

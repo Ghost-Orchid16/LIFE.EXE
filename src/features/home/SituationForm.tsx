@@ -73,12 +73,12 @@ export function SituationForm({ onSubmit }: { onSubmit: (text: string) => void }
   };
 
   return (
-    <form className="situation" onSubmit={onFormSubmit} noValidate>
+    <form className="situation rise" onSubmit={onFormSubmit} noValidate>
       <div className="situation__head">
         <label htmlFor="situation-input" className="situation__label">
           What's going on?
         </label>
-        <p id="situation-help" className="situation__help">
+        <p id="situation-help" className="visually-hidden">
           Tell LIFE.EXE what's happening. No category required. Just explain it naturally.
         </p>
       </div>
