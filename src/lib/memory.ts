@@ -3,16 +3,7 @@
 // as the context of that one request, exactly like a conversation that never left the tab.
 
 import type { LifeResponse } from "../../shared/contract.ts";
-import {
-  EMPTY_CONVERSATION,
-  newId,
-  resumeTurns,
-  savedTurns,
-  type AnswerTurn,
-  type ConversationState,
-  type SavedTurn,
-  type Turn,
-} from "./conversation.ts";
+import { newId, savedTurns, type AnswerTurn, type SavedTurn, type Turn } from "./conversation.ts";
 
 /** The part of the Web Storage API that memory uses, so tests can run it on a stand-in. */
 export interface KeyValueStore {
@@ -23,9 +14,9 @@ export interface KeyValueStore {
 
 /** Saved situations (localStorage): they stay in this browser until local memory is cleared. */
 export const MEMORY_KEY = "lifeexe-memory";
-/** The situation open when LIFE.EXE was last used (localStorage), so coming back reopens it. Empty: the home page. */
+/** Where earlier versions kept the situation open when LIFE.EXE was last used (localStorage), to reopen it. No longer read. */
 export const LAST_OPEN_KEY = "lifeexe-last-open";
-/** The situation open in this tab (sessionStorage), so a reload keeps each tab where it was. Empty: the home page. */
+/** Where earlier versions kept the situation open in each tab (sessionStorage), to reopen it on reload. No longer read. */
 export const OPEN_KEY = "lifeexe-open";
 /** Where earlier versions kept the tab's conversation (sessionStorage). */
 export const LEGACY_SESSION_KEY = "lifeexe-session";
@@ -201,19 +192,11 @@ function attempt(action: () => void): boolean {
   }
 }
 
-function read(store: KeyValueStore | null, key: string): string | null {
-  try {
-    return store?.getItem(key) ?? null;
-  } catch {
-    return null;
-  }
-}
-
 // ---------- The memory ----------
 
 /**
- * Local memory on top of the browser's storage: `local` keeps saved situations and the one last open,
- * `session` remembers which one this tab has open. Either can be `null` (storage blocked); memory then
+ * Local memory on top of the browser's storage: `local` keeps saved situations, and `session` may still hold
+ * a conversation an earlier version kept in the tab. Either can be `null` (storage blocked); memory then
  * quietly keeps nothing and LIFE.EXE works as before, for as long as the tab is open.
  */
 export function createMemory(local: KeyValueStore | null, session: KeyValueStore | null = null) {
@@ -251,24 +234,7 @@ export function createMemory(local: KeyValueStore | null, session: KeyValueStore
     attempt(() => session?.removeItem(LEGACY_SESSION_KEY));
   }
 
-  /** The situation to show: this tab's after a reload, otherwise the one open when LIFE.EXE was last used. */
-  function openId(): string | null {
-    return (read(session, OPEN_KEY) ?? read(local, LAST_OPEN_KEY)) || null;
-  }
-
-  function setOpenId(id: string | null) {
-    attempt(() => session?.setItem(OPEN_KEY, id ?? ""));
-    attempt(() => (id ? local?.setItem(LAST_OPEN_KEY, id) : local?.removeItem(LAST_OPEN_KEY)));
-  }
-
-  /** What LIFE.EXE shows when it opens: the situation the person was in, exactly as they left it. Nothing is sent. */
-  function reopen(): ConversationState {
-    const id = openId();
-    const saved = id ? get(id) : null;
-    return saved ? { id: saved.id, turns: resumeTurns(saved.turns) } : EMPTY_CONVERSATION;
-  }
-
-  /** Earlier versions kept the tab's conversation in sessionStorage. Moves it into memory and reopens it. */
+  /** Earlier versions kept the tab's conversation in sessionStorage. Moves it into memory, with the other saved situations. */
   function adoptLegacySession(now = Date.now()) {
     let turns: SavedTurn[] | null;
     try {
@@ -279,11 +245,10 @@ export function createMemory(local: KeyValueStore | null, session: KeyValueStore
     } catch {
       return;
     }
-    const id = newId();
-    if (turns && save(id, turns, now)) setOpenId(id);
+    if (turns) save(newId(), turns, now);
   }
 
-  return { list, get, save, clear, openId, setOpenId, reopen, adoptLegacySession };
+  return { list, get, save, clear, adoptLegacySession };
 }
 
 export type Memory = ReturnType<typeof createMemory>;

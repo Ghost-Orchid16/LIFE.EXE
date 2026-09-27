@@ -86,19 +86,19 @@ const EARLIER_ANSWER = {
 
 /**
  * One browser tab, driven the way useConversation drives it: the same reducer and the same memory calls.
+ * Like the app, it opens on the home page (useConversation.test.ts checks that on the hook itself).
  * `answer` stands in for the API's reply; `sent` records every conversation the tab sent to the API.
  */
 function openTab(browser: Browser) {
   const memory = createMemory(browser.local, browser.session);
   memory.adoptLegacySession();
-  let state: ConversationState = memory.reopen();
+  let state: ConversationState = EMPTY_CONVERSATION;
   let pendingId = "";
   const sent: ChatMessage[][] = [];
 
   const commit = (next: ConversationState) => {
     state = next;
     if (state.id) memory.save(state.id, state.turns);
-    memory.setOpenId(state.id);
   };
 
   return {
@@ -126,7 +126,6 @@ function openTab(browser: Browser) {
       const saved = memory.get(id);
       assert.ok(saved, `situation ${id} is saved`);
       state = reducer(state, { type: "open", conversationId: id, turns: resumeTurns(saved.turns) });
-      memory.setOpenId(id);
     },
   };
 }
@@ -175,34 +174,45 @@ describe("Local memory", () => {
     assert.equal(saved.createdAt, createdAt);
     // Messages, answers, how each answer was made (live or demo) and when: all of it, as it was.
     assert.deepEqual(saved.turns, tab.state.turns);
-    assert.equal(browser.session.getItem(OPEN_KEY), saved.id);
   });
 
-  it("restores the open situation after a reload, without sending anything", () => {
+  it("goes back to the home page on reload, with the open situation saved to continue", () => {
     const browser = newBrowser();
     const tab = openTab(browser);
-    talkAboutFriend(tab);
+    const friendId = talkAboutFriend(tab);
 
     const reloaded = openTab(browser);
-    assert.deepEqual(reloaded.state, tab.state);
+    assert.deepEqual(reloaded.state, EMPTY_CONVERSATION, "the home page, not the situation that was open");
+    assert.deepEqual(reloaded.memory.list().map((conversation) => conversation.id), [friendId]);
+    reloaded.open(friendId);
+    assert.deepEqual(reloaded.state, tab.state, "opened by hand, it's exactly as it was left");
     assert.ok(!isBusy(reloaded.state.turns), "nothing is waiting on the API");
 
     // A message that was still waiting for its answer comes back as interrupted, to retry when the person chooses.
     reloaded.send(CONTINUE);
-    const interrupted = openTab(browser).state.turns;
+    const again = openTab(browser);
+    assert.deepEqual(again.state, EMPTY_CONVERSATION);
+    again.open(friendId);
+    const interrupted = again.state.turns;
     const last = interrupted.at(-1);
     assert.ok(last?.role === "assistant" && last.status === "error" && last.code === "interrupted");
     assert.ok(!isBusy(interrupted));
     assert.deepEqual(interrupted.slice(0, -1), reloaded.state.turns.slice(0, -1));
   });
 
-  it("reopens the situation the person was in when they come back, ready to continue", () => {
+  it("comes back to the home page, where the situation the person was in can be continued", () => {
     const browser = newBrowser();
     const tab = openTab(browser);
-    talkAboutFriend(tab);
+    const friendId = talkAboutFriend(tab);
 
     // The site was closed, and opened again later.
     const later = openTab(nextVisit(browser));
+    assert.deepEqual(later.state, EMPTY_CONVERSATION);
+    assert.deepEqual(
+      later.memory.list().map(({ id, title }) => ({ id, title })),
+      [{ id: friendId, title: "Talking to a friend about what happened" }],
+    );
+    later.open(friendId);
     assert.deepEqual(later.state, tab.state);
     assert.ok(!isBusy(later.state.turns));
     const context = later.send(CONTINUE);
@@ -228,21 +238,23 @@ describe("Local memory", () => {
     assert.deepEqual(later.state.turns, tab.memory.get(friendId)?.turns);
   });
 
-  it("keeps each tab in its own situation across a reload", () => {
-    const said = (state: ConversationState) => state.turns.flatMap((turn) => (turn.role === "user" ? [turn.text] : []));
+  it("opens every new tab and every reload on the home page, whatever other tabs have open", () => {
     const firstTab = newBrowser();
     const first = openTab(firstTab);
     const friendId = talkAboutFriend(first);
     first.startNew();
     first.send(JOBS);
+    const jobsId = first.state.id!;
 
     const secondTab = nextVisit(firstTab);
     const second = openTab(secondTab);
-    assert.deepEqual(said(second.state), [JOBS], "a new tab opens where LIFE.EXE was last used");
+    assert.deepEqual(second.state, EMPTY_CONVERSATION, "not where LIFE.EXE was last used");
     second.open(friendId);
 
-    assert.deepEqual(said(openTab(firstTab).state), [JOBS]);
-    assert.deepEqual(said(openTab(secondTab).state), [FRIEND, FOLLOW_UP]);
+    for (const reloaded of [openTab(firstTab), openTab(secondTab)]) {
+      assert.deepEqual(reloaded.state, EMPTY_CONVERSATION);
+      assert.deepEqual(reloaded.memory.list().map((conversation) => conversation.id), [jobsId, friendId]);
+    }
   });
 
   it("keeps separate situations separate", () => {
@@ -282,7 +294,6 @@ describe("Local memory", () => {
 
     tab.startNew();
     assert.deepEqual(tab.state, EMPTY_CONVERSATION);
-    assert.equal(tab.memory.openId(), null, "a reload stays on the home page");
     assert.deepEqual(tab.memory.get(friendId), before, "the old situation is kept, unchanged");
 
     const context = tab.send(JOBS);
@@ -362,6 +373,9 @@ describe("Local memory", () => {
   it("clears local memory completely, and nothing else", () => {
     const browser = newBrowser();
     browser.local.setItem("lifeexe-theme", "dark");
+    // Left by an earlier version, which kept track of the open situation.
+    browser.local.setItem(LAST_OPEN_KEY, "earlier");
+    browser.session.setItem(OPEN_KEY, "earlier");
     const tab = openTab(browser);
     talkAboutFriend(tab);
     tab.startNew();
@@ -414,9 +428,9 @@ describe("Local memory", () => {
         assert.ok(!/GEMINI|api[_-]?key/i.test(value), `${key} holds no configuration`);
       }
     }
-    assert.deepEqual([...browser.local.data.keys()].sort(), [LAST_OPEN_KEY, MEMORY_KEY]);
-    assert.deepEqual([...browser.session.data.keys()], [OPEN_KEY]);
-    assert.equal(browser.local.getItem(LAST_OPEN_KEY), tab.state.id);
+    // Only the saved situations: not which one is open, so nothing reopens it on the next visit or reload.
+    assert.deepEqual([...browser.local.data.keys()], [MEMORY_KEY]);
+    assert.deepEqual([...browser.session.data.keys()], []);
 
     const file = JSON.parse(browser.local.getItem(MEMORY_KEY)!);
     assert.deepEqual(Object.keys(file), ["version", "conversations"]);
@@ -446,6 +460,7 @@ describe("Local memory", () => {
     tab.answer(reply.response, reply.mode);
 
     const reloaded = openTab(browser);
+    reloaded.open(tab.state.id!);
     assert.deepEqual(reloaded.state, tab.state);
     reply = await ask(reloaded.send(CONTINUE));
     reloaded.answer(reply.response, reply.mode);
@@ -526,7 +541,7 @@ describe("Local memory", () => {
     const unavailable = createMemory(null, null);
     assert.equal(unavailable.save("a", turns), false);
     assert.deepEqual(unavailable.list(), []);
-    assert.deepEqual(unavailable.reopen(), EMPTY_CONVERSATION);
+    assert.equal(unavailable.get("a"), null);
 
     const denied = () => {
       throw new DOMException("The operation is insecure.", "SecurityError");
@@ -537,9 +552,7 @@ describe("Local memory", () => {
       memory.adoptLegacySession();
       assert.equal(memory.save("a", turns), false);
       assert.deepEqual(memory.list(), []);
-      memory.setOpenId("a");
-      assert.equal(memory.openId(), null);
-      assert.deepEqual(memory.reopen(), EMPTY_CONVERSATION);
+      assert.equal(memory.get("a"), null);
       memory.clear();
     });
   });
@@ -600,7 +613,7 @@ describe("Local memory", () => {
     assert.deepEqual(saidIn(tab.memory.get("earlier")), [FRIEND, CONTINUE]);
   });
 
-  it("brings along a conversation kept by the previous version, in this tab", () => {
+  it("brings along a conversation kept by the previous version in this tab, to continue from the home page", () => {
     const browser = newBrowser();
     browser.session.setItem(
       LEGACY_SESSION_KEY,
@@ -614,10 +627,15 @@ describe("Local memory", () => {
 
     const tab = openTab(browser);
     assert.equal(browser.session.getItem(LEGACY_SESSION_KEY), null);
+    assert.deepEqual(tab.state, EMPTY_CONVERSATION, "it's listed, not opened");
+    assert.deepEqual([...browser.local.data.keys()], [MEMORY_KEY], "and nothing marks it as the open situation");
+    assert.deepEqual([...browser.session.data.keys()], []);
+    const [adopted] = tab.memory.list();
+    assert.deepEqual(saidIn(adopted), [FRIEND, FOLLOW_UP]);
+    tab.open(adopted.id);
     assert.deepEqual(
       tab.state.turns.map((turn) => (turn.role === "user" ? turn.text : turn.status)),
       [FRIEND, "done", FOLLOW_UP, "error"],
     );
-    assert.deepEqual(saidIn(tab.memory.get(tab.state.id!)), [FRIEND, FOLLOW_UP]);
   });
 });
