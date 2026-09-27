@@ -253,10 +253,10 @@ export const SCENARIOS: DemoScenario[] = [
     ],
     initial: initial({
       answer:
-        "Choose the one that fits what you want for the next year or two, not forever. If they feel equal, take the one that would be harder to get again.",
+        "Don't pick on a general rule like \"safe is boring\" or \"risky is braver\". Compare what each option would actually give you, what it would cost, and how easy it would be to undo.",
       points: [
         "Which one would you regret turning down?",
-        "Which one would teach you more?",
+        "What's the realistic downside of each?",
         "Which one is easier to change later?",
       ],
       nextMove: "Answer those three for each option tonight, and see which one comes out ahead.",
@@ -264,8 +264,8 @@ export const SCENARIOS: DemoScenario[] = [
       title: "Choosing between two options",
     }),
     direct: {
-      answer: "If one option scares you a little but excites you more, that's usually the one worth taking, as long as you can afford the downside.",
-      nextMove: "Check the real worst case of the bolder option. If you could live with it, choose that one.",
+      answer: "Neither safe nor risky is better by default. Choose the one whose worst case you could live with and whose best case you actually want.",
+      nextMove: "Write down the realistic worst case of each option, and cross off any you couldn't live with.",
       followUps: ["What should I do first?", "What if I choose wrong?"],
     },
     firstStep: {
@@ -281,7 +281,8 @@ export const SCENARIOS: DemoScenario[] = [
     },
     extras: [
       {
-        match: /\b(stabil|secur|safe|steady|reliable)/i,
+        // Only when they say it's what they want, not whenever they describe an option as safe or stable.
+        match: /\bcar(e|es|ing)( most| more)? about (stabil|secur|safe|steady)|\b(want|need|prefer|value)\b( \w+){0,3} (stabil|secur|safe|steady|reliab)|\b(stability|security|safety) (matters|is (what|more|most))/i,
         reply: {
           answer: "Then take the steadier option, and look for growth in other ways, like a course or a side project.",
           nextMove: "Check which option is more secure over the next year, not just the next month.",
@@ -289,7 +290,7 @@ export const SCENARIOS: DemoScenario[] = [
         },
       },
       {
-        match: /\b(grow|growth|learn|challeng|excit|stretch)/i,
+        match: /\bcar(e|es|ing)( most| more)? about (grow|learn|challeng|excit)|\b(want|need|prefer|value)\b( \w+){0,3} (grow|learn|challeng|excit|stretch)|\b(growth|learning) (matters|is (what|more|most))/i,
         reply: {
           answer: "Then take the one that stretches you, as long as the practical side works: money, time and where you'd live.",
           nextMove: "Check the practical downside of the growth option. If it's manageable, go for it.",
@@ -429,6 +430,118 @@ export const SCENARIOS: DemoScenario[] = [
           answer: "They might be, at first. Disappointment usually fades when people see you've thought it through and you're okay.",
           nextMove: "Tell them your plan, including what you'll do if it doesn't work out.",
           followUps: ["Help me explain it to them.", "Am I being selfish?"],
+        },
+      },
+    ],
+  },
+  {
+    id: "apology",
+    keywords: [
+      // They're the one apologizing: not "my boss never apologizes", "I hurt my knee" or "I want to hurt someone".
+      /\b(i|me)\b[^.?!]*\bapologi[sz]/i,
+      /\b(i|me)\b[^.?!]*\bsay(ing)? sorry\b/i,
+      /\bi( think i| might have| may have| accidentally|'ve| have| didn'?t mean to)? hurt (someone|somebody|them|him|her|a friend|my (best )?friends?|(their|his|my \w+'s) feelings)\b/i,
+      /\bmake (it|things) right\b/i,
+    ],
+    initial: initial({
+      answer: "Keep it simple: say what you did, say you're sorry, and leave out excuses.",
+      nextMove: "Apologize soon, in whatever way you'd normally talk to them, then give them room to respond.",
+      scripts: ["I'm sorry for what I did. It wasn't fair to you, and I'd like to make it right."],
+      followUps: ["What if they don't accept it?", "Help me word it differently.", "Should I do it in person?"],
+      title: "Apologizing to someone",
+    }),
+    direct: {
+      answer: "Apologize soon and keep it short. Say what you did and that you're sorry, without explaining it away.",
+      nextMove: "Decide today when and how you'll say it, then do it.",
+      followUps: ["Help me word it differently.", "What if they don't accept it?"],
+    },
+    firstStep: {
+      answer: "Start by getting clear on exactly what you're apologizing for, in one sentence.",
+      nextMove: "Write that sentence down, then use it to open your apology.",
+      followUps: ["Help me word it differently.", "Should I do it in person?"],
+    },
+    words: {
+      answer: "Name it, own it, and don't add a \"but\".",
+      scripts: [
+        "I'm sorry for what I did. It wasn't fair to you.",
+        "I've been thinking about what happened, and I was wrong. I'm sorry.",
+        "I'm sorry. I'd like to make it right, if you'll let me.",
+      ],
+      nextMove: "Pick the one that sounds most like you, and say it without adding excuses.",
+      followUps: ["What if they don't accept it?", "Should I do it in person?"],
+    },
+    extras: [
+      {
+        match: /\b(don'?t|doesn'?t|won'?t|not) (accept|forgive)/i,
+        reply: {
+          answer: "That's up to them, and it may take time. You can make the apology sincere; you can't decide how they respond.",
+          nextMove: "Say it once, then give them space. Don't push for forgiveness.",
+          followUps: ["Should I do it in person?", "Help me word it differently."],
+        },
+      },
+      {
+        match: /\bin person\b|\b(by|over|in a) (text|message|call|phone)\b|\bshould i (text|call|message)\b/i,
+        reply: {
+          answer: "If you usually talk in person, do it in person. If you mostly text, a message is fine. What matters is that it's sincere and specific.",
+          nextMove: "Choose the way you'd normally talk to them, and do it soon.",
+          followUps: ["What if they don't accept it?", "Help me word it differently."],
+        },
+      },
+    ],
+  },
+  {
+    id: "stuck",
+    keywords: [
+      /\bstuck\b/i,
+      /\bdon'?t know where to (start|begin)\b/i,
+      /\bdon'?t know what i'?m doing\b/i,
+      /\boverwhelm/i,
+    ],
+    initial: initial({
+      answer: "When everything feels stuck, don't try to solve it all at once. Start with the one part that's weighing on you most.",
+      question: "What's feeling most stuck right now: school or work, relationships, motivation, or something else?",
+      followUps: ["School or work.", "A relationship.", "My motivation."],
+      title: "Feeling stuck",
+    }),
+    direct: {
+      answer: "Pick one small thing and do it today, instead of trying to figure everything out first.",
+      nextMove: "Choose the smallest task you've been avoiding, and do only the first step.",
+      followUps: ["School or work.", "My motivation."],
+    },
+    firstStep: {
+      answer: "Start with one small, concrete thing, not the whole picture.",
+      nextMove: "Write down what's weighing on you, then pick the easiest thing to start with.",
+      followUps: ["School or work.", "A relationship."],
+    },
+    words: {
+      answer: "If it would help to talk it through, you can keep it simple.",
+      scripts: ["I've been feeling pretty stuck lately. Could we talk for a bit?"],
+      nextMove: "Send it to one person you trust.",
+      followUps: ["School or work.", "My motivation."],
+    },
+    extras: [
+      {
+        match: /\b(school|work|job|class(es)?|study|studying|exams?|homework|boss)\b/i,
+        reply: {
+          answer: "Then start with one task, not the whole workload: whichever has the nearest deadline, or has been hanging over you longest.",
+          nextMove: "Do the first small step of that one task today, even if it's just opening it.",
+          followUps: ["My motivation.", "A relationship."],
+        },
+      },
+      {
+        match: /\brelationship|\bfriend|\bpartner\b|\bfamily\b|\bparents?\b/i,
+        reply: {
+          answer: "Then focus on the one relationship that's on your mind most, and on one thing you could say or do about it.",
+          nextMove: "Decide whether you need to talk to them, or some time to think first.",
+          followUps: ["Help me talk to someone about it.", "My motivation."],
+        },
+      },
+      {
+        match: /\bmotivat|\benergy\b|\bcan'?t get (myself )?(going|started)\b/i,
+        reply: {
+          answer: "Then don't wait to feel motivated. Make the next step so small that you can do it anyway.",
+          nextMove: "Pick one tiny task and do it for a few minutes today. If you feel like continuing, keep going; if not, that still counts.",
+          followUps: ["School or work.", "A relationship."],
         },
       },
     ],

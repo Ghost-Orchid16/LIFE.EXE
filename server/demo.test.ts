@@ -22,6 +22,8 @@ const EXAMPLES: Record<string, string> = {
   "two-options": "I have two opportunities and don't know which one to choose.",
   "bad-decision": "I think I made a bad decision.",
   expectations: "I'm stuck between what I want and what other people expect from me.",
+  apology: "I think I hurt someone. How do I apologize?",
+  stuck: "I don't know what I'm doing anymore. Everything feels stuck and I don't know where to start.",
 };
 
 function conversation(...turns: string[]): ChatMessage[] {
@@ -58,6 +60,26 @@ const everyReply: Array<[string, LifeResponse]> = [
 ];
 
 const wordsIn = (...texts: string[]) => texts.join(" ").split(/\s+/).filter(Boolean).length;
+
+/** Everything an answer says, in one string. */
+const saidIn = (r: LifeResponse) => [r.care, r.answer, ...r.points, r.question, r.nextMove, ...r.scripts, r.alternative].join(" ");
+
+// Stating another person's feelings, motives or reasons as fact.
+const MIND_READING = [
+  /\b(they|he|she)('re| are| is|'s) (still )?(angry|upset|mad|hurt|ignoring you|not ready)\b/i,
+  /\b(they|he|she) (want|wants|need|needs) (space|distance|time)\b/i,
+  /\bsilence (means|is their way)\b/i,
+  /\bbecause (they|he|she) (want|wants|need|needs|are|is)\b/i,
+];
+// Diagnosis-like explanations for a vague situation.
+const DIAGNOSES = /\bburn(ed|t)?[ -]?out\b|nervous system|\boverwhelmed\b|open loops|\banxiety\b|\bdepress/i;
+// Recommending the risky or scary option by default, or deciding on a general rule.
+const RISK_BIAS = [
+  /\b(scar|risk|bold|excit)\w*[^.]*\b(worth taking|choose that one|go for it)\b/i,
+  /\b(risky|riskier|bolder|scarier|exciting|interesting) (one|option|choice|path) is (usually |probably |often )?(better|braver|the one)\b/i,
+  /\bfear means\b/i,
+  /\bsafe choices?\b[^.]*\bregret/i,
+];
 
 describe("demo content", () => {
   it("matches every example situation to its scenario", () => {
@@ -156,6 +178,87 @@ describe("buildDemoResponse", () => {
     const unmatched = buildDemoResponse(conversation(career, "The weather was nice."));
     assert.match(unmatched.answer, /Demo mode can't adapt/);
     assert.equal(unmatched.nextMove, SCENARIOS[0].initial.nextMove);
+  });
+});
+
+describe("reasoning rules, in demo mode", () => {
+  const TWO_OPTIONS = "I have two options. One is the safe choice and the other is more interesting but risky. Which should I take?";
+  const AFTER_ARGUMENT = "My friend stopped talking to me after we had an argument.";
+
+  it("never states another person's feelings or motives as fact", () => {
+    for (const [label, response] of everyReply) {
+      for (const pattern of MIND_READING) assert.doesNotMatch(saidIn(response), pattern, label);
+    }
+  });
+
+  it("A: doesn't state a friend's feelings or motives as facts after an argument", () => {
+    const first = buildDemoResponse(conversation(AFTER_ARGUMENT));
+    const replies = [first, ...first.followUps.map((followUp) => buildDemoResponse(conversation(AFTER_ARGUMENT, followUp)))];
+    for (const response of replies) {
+      for (const pattern of MIND_READING) assert.doesNotMatch(saidIn(response), pattern, response.answer);
+    }
+    assert.ok(first.nextMove, "and still gives a clear next move");
+  });
+
+  it("B: doesn't recommend the risky option when the options aren't known", () => {
+    const first = buildDemoResponse(conversation(TWO_OPTIONS));
+    const direct = buildDemoResponse(conversation(TWO_OPTIONS, "Can you be more direct?"));
+    for (const response of [first, direct]) {
+      for (const pattern of RISK_BIAS) assert.doesNotMatch(saidIn(response), pattern, response.answer);
+    }
+    assert.match(first.answer, /what each option would actually give you, what it would cost, and how easy it would be to undo/);
+    assert.match(direct.answer, /Neither safe nor risky is better by default/);
+  });
+
+  it("C: asks what's most stuck instead of diagnosing a vague situation", () => {
+    const first = buildDemoResponse(conversation(EXAMPLES.stuck));
+    assert.equal(first.question, "What's feeling most stuck right now: school or work, relationships, motivation, or something else?");
+    assert.doesNotMatch(saidIn(first), DIAGNOSES);
+    // Each suggested answer to the question leads to help for that part.
+    for (const followUp of first.followUps) {
+      const next = buildDemoResponse(conversation(EXAMPLES.stuck, followUp));
+      assert.notEqual(next.answer, FALLBACK_REPLY.answer, followUp);
+      assert.doesNotMatch(saidIn(next), DIAGNOSES, followUp);
+    }
+  });
+
+  it("D: says so when given options it can't analyze, instead of picking one for them", () => {
+    for (const options of [
+      "Option A is staying in my current job. Option B is joining a friend's startup.",
+      // Calling an option safe or stable describes it; it doesn't say that's what they want.
+      "The safe option is a stable job at a bank. The risky one is a startup where I'd learn a lot.",
+      "Option A is a secure government job. Option B is freelancing.",
+    ]) {
+      const response = buildDemoResponse(conversation(TWO_OPTIONS, options));
+      assert.match(response.answer, /Demo mode can't adapt to new details/, options);
+      for (const pattern of RISK_BIAS) assert.doesNotMatch(saidIn(response), pattern, options);
+    }
+    // Once they say what matters to them, it can point to the option that fits.
+    assert.match(buildDemoResponse(conversation(TWO_OPTIONS, "Stability matters most to me.")).answer, /take the steadier option/);
+    assert.match(buildDemoResponse(conversation(TWO_OPTIONS, "I want to grow the most.")).answer, /take the one that stretches you/);
+  });
+
+  it("E: goes straight to practical apology help", () => {
+    const response = buildDemoResponse(conversation(EXAMPLES.apology));
+    assert.equal(response.title, "Apologizing to someone");
+    assert.match(response.answer, /say you're sorry/);
+    assert.ok(response.scripts.length > 0, "with words to use");
+    assert.doesNotMatch(saidIn(response), /what you know for sure|worried might be true|how serious/i);
+    assert.equal(buildDemoResponse(conversation(EXAMPLES.apology, "Help me word it differently.")).scripts.length, 3);
+  });
+
+  it("E: gives apology help only when they're the one apologizing", () => {
+    for (const text of [
+      "How do I apologize to my mom?",
+      "Should I say sorry first?",
+      "I didn't mean to hurt her. What should I do?",
+      "I think I hurt my sister's feelings yesterday.",
+    ]) {
+      assert.equal(matchScenario(text)?.id, "apology", text);
+    }
+    for (const text of ["I hurt my back at work.", "I want to hurt someone.", "My boss never apologizes for anything.", "He hurt my feelings."]) {
+      assert.notEqual(matchScenario(text)?.id, "apology", text);
+    }
   });
 });
 
