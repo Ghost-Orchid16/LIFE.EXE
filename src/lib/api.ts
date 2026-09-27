@@ -71,6 +71,8 @@ export interface SendOptions {
   signal: AbortSignal;
   onStage: (stage: Stage) => void;
   onMode: (mode: Mode) => void;
+  /** The live AI couldn't answer this time, so this answer comes from the demo engine. */
+  onFallback: () => void;
 }
 
 /**
@@ -113,6 +115,7 @@ export async function sendConversation(messages: ChatMessage[], options: SendOpt
         if (!event) continue;
 
         if (event.type === "meta") options.onMode(event.mode);
+        else if (event.type === "fallback") options.onFallback();
         else if (event.type === "stage") options.onStage(event.stage);
         else if (event.type === "result") return event.response;
         else if (event.type === "error") throw new ApiError(isErrorCode(event.code) ? event.code : "server_error");

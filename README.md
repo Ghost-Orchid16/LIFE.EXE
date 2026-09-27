@@ -64,6 +64,7 @@ When no `GEMINI_API_KEY` is set, LIFE.EXE answers with pre-written responses ins
 - Demo responses cover six common situations (a career choice, a friend who's gone quiet, a difficult conversation, two opportunities, a decision you regret, and your wants versus other people's expectations) and a general fallback, in the same short format as live answers. Every follow-up button they offer has its own pre-written reply, and common follow-ups like "Can you be more direct?" or "What should I do first?" work too. Anything else gets an honest "demo mode can't adapt to new details" reply.
 - If a message suggests someone may be in danger, demo mode always responds with a support message pointing to emergency services and crisis lines.
 - Demo mode is always labelled: a **Demo mode** badge in the header, a note under the input, and a **Demo response** tag on every answer. Demo answers are never presented as live AI.
+- **Backup for live mode.** With a key set, if Gemini can't answer a message because it's rate limited (429), overloaded (503 or another error on Google's side), too slow (about 24 seconds) or unreachable, demo mode answers that one message instead. The answer carries the same **Demo response** tag, and no error is shown. The app stays in live mode, and the next message tries Gemini again. Safety refusals and setup problems, such as an invalid key, are reported as before.
 
 ## Conversation memory
 
@@ -90,9 +91,9 @@ Without `GEMINI_API_KEY`, the deployed site runs in demo mode. One exception: if
 
 A few things to know before sharing a live deployment:
 
-- **Anyone with the link can use your key.** On the free tier, heavy use runs into Google's rate limits (LIFE.EXE then says it's handling a lot right now) rather than costing money. If you enable billing on the key's Google Cloud project, keep an eye on usage.
+- **Anyone with the link can use your key.** On the free tier, heavy use runs into Google's rate limits (LIFE.EXE then answers from demo mode until the limit resets, labelling those answers as demo responses) rather than costing money. If you enable billing on the key's Google Cloud project, keep an eye on usage.
 - **Privacy on the free tier.** Google's Gemini API terms say free-tier prompts and responses may be used to improve Google's products and may be read by human reviewers. People describe personal situations here, so check the current terms, and consider a paid tier before sharing the app widely.
-- **Response time.** Netlify stops functions after a time limit (about 30 seconds by default). LIFE.EXE streams its progress, asks the model for quick (low) thinking and keeps answers short, so a normal answer finishes well within that. If you see "That took longer than it should have", choose a faster `GEMINI_MODEL`.
+- **Response time.** Netlify stops functions after a time limit (about 30 seconds by default). LIFE.EXE streams its progress, asks the model for quick (low) thinking and keeps answers short, so a normal answer finishes well within that. If Gemini takes longer than about 24 seconds, demo mode answers that message instead; if that happens often, choose a faster `GEMINI_MODEL`.
 
 ## Project structure
 
@@ -106,6 +107,7 @@ server/                     API layer and AI service (no browser code)
   providers/                One file per AI provider, behind one interface
     gemini.ts               Google Gemini via the @google/genai SDK (streamed structured output)
     demo.ts                 Demo mode
+    fallback.ts             Live mode's backup: demo mode answers when Gemini can't
   demo/                     Demo mode's pre-written responses and matching logic
   prompt.ts                 LIFE.EXE's instructions to the model
   schema.ts                 The structured response format, and its validation
@@ -127,6 +129,8 @@ Browser ──POST /api/life──▶ handler ──▶ provider (Gemini or demo
    ▲                          │
    └──── server-sent events ──┘   meta → stage (×3) → result | error
 ```
+
+When demo mode answers for Gemini (see [Demo mode](#demo-mode)), a `fallback` event tells the browser to label that answer as a demo response.
 
 With each message the browser sends the conversation being continued, and only that one; nothing is stored on the server. Conversations are saved in the browser instead (see [Conversation memory](#conversation-memory)).
 
