@@ -45,8 +45,8 @@ interface ActiveRequest {
 
 export function useConversation(onMode: (mode: Mode) => void) {
   const [memory] = useState(openMemory);
-  // Reopens the situation the person was in when they left. Nothing is sent until they send something.
-  const [state, dispatch] = useReducer(reducer, memory, (opened) => opened.reopen());
+  // Every visit and every reload starts on the home page. Saved situations are listed there, to continue from.
+  const [state, dispatch] = useReducer(reducer, EMPTY_CONVERSATION);
   const [saved, setSaved] = useState(memory.list);
   const stateRef = useRef(state);
   // The open situation as last written to local memory, so it's written only when something new was said.
@@ -65,8 +65,6 @@ export function useConversation(onMode: (mode: Mode) => void) {
     persisted.current = { id, signature, stored: memory.save(id, turns) };
     if (persisted.current.stored) setSaved(memory.list());
   }, [memory, state]);
-
-  useEffect(() => memory.setOpenId(state.id), [memory, state.id]);
 
   useEffect(() => () => active.current?.controller.abort(), []);
 
