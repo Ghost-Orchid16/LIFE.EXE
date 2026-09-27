@@ -41,7 +41,7 @@ export function SavedSituations({ conversations, onOpen, onClear }: SavedSituati
   if (conversations.length === 0) {
     if (!cleared) return null;
     return (
-      <p className="memory__cleared" tabIndex={-1} ref={status}>
+      <p className="memory__cleared rise" tabIndex={-1} ref={status}>
         <Check size={15} />
         Local memory cleared. No situations are saved in this browser.
       </p>
@@ -62,7 +62,7 @@ export function SavedSituations({ conversations, onOpen, onClear }: SavedSituati
   const count = conversations.length === 1 ? "the saved situation" : `all ${conversations.length} saved situations`;
 
   return (
-    <section className="memory" aria-labelledby={headingId}>
+    <section className="memory rise" aria-labelledby={headingId}>
       <h2 id={headingId} className="kicker">
         Pick up where you left off
       </h2>

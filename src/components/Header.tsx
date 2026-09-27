@@ -17,7 +17,7 @@ interface HeaderProps {
 export function Header({ mode, theme, onThemeChange, onNewSituation }: HeaderProps) {
   return (
     <header className="site-header">
-      <div className="container site-header__inner">
+      <div className="container site-header__inner rise">
         <Brand />
         <div className="site-header__actions">
           {mode === "demo" && <ModeBadge />}
