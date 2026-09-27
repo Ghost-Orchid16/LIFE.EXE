@@ -70,22 +70,25 @@ function readResponse(text: string, finishReason: string | undefined): LifeRespo
   return response;
 }
 
+// `temporary` marks the failures where Gemini was busy, slow or unreachable, so another attempt could work.
+// Refusals, setup problems (a bad key, a missing model) and unusable answers are not.
 function toLifeError(error: unknown, signal: AbortSignal): LifeError {
   if (error instanceof LifeError) return error;
-  if (signal.aborted) return new LifeError("timeout", { cause: error });
+  if (signal.aborted) return new LifeError("timeout", { cause: error, temporary: true });
   if (error instanceof ApiError) {
-    if (error.status === 429) return new LifeError("rate_limited", { cause: error });
-    if (error.status === 503) return new LifeError("overloaded", { cause: error });
-    if (error.status === 504 || error.status === 408) return new LifeError("timeout", { cause: error });
+    if (error.status === 429) return new LifeError("rate_limited", { cause: error, temporary: true });
+    if (error.status === 503) return new LifeError("overloaded", { cause: error, temporary: true });
+    if (error.status === 504 || error.status === 408) return new LifeError("timeout", { cause: error, temporary: true });
     // An invalid key comes back as 400 INVALID_ARGUMENT with reason API_KEY_INVALID.
     const badKey = error.status === 400 && /API[_ ]key/i.test(error.message);
     if (badKey || error.status === 401 || error.status === 403 || error.status === 404) {
       return new LifeError("unavailable", { cause: error });
     }
-    return new LifeError("server_error", { cause: error });
+    // Any other failure on Google's side (500, 502…) passes too; other 4xx mean the request itself was wrong.
+    return new LifeError("server_error", { cause: error, temporary: error.status >= 500 });
   }
   // `fetch` rejects with a TypeError when Google's servers can't be reached at all.
-  if (error instanceof TypeError) return new LifeError("unavailable", { cause: error });
+  if (error instanceof TypeError) return new LifeError("unavailable", { cause: error, temporary: true });
   return new LifeError("server_error", { cause: error });
 }
 

@@ -8,6 +8,7 @@ import {
 } from "../shared/contract.ts";
 import { readConfig, type Env } from "./config.ts";
 import { createDemoProvider } from "./providers/demo.ts";
+import { withFallback } from "./providers/fallback.ts";
 import { createGeminiProvider } from "./providers/gemini.ts";
 import { LifeError, type LifeProvider } from "./providers/types.ts";
 import { validateLifeRequest } from "./validation.ts";
@@ -15,11 +16,18 @@ import { validateLifeRequest } from "./validation.ts";
 // Netlify stops synchronous functions after 30 seconds. Finishing a little earlier lets the
 // browser show a clear "that took too long" message instead of a dropped connection.
 const RESPONSE_DEADLINE_MS = 27_000;
+// If Gemini is still working by then, the demo engine answers instead: it takes about two seconds.
+const LIVE_DEADLINE_MS = 24_000;
 
-/** Live AI when a key is configured, otherwise the clearly labelled demo. */
+/**
+ * Live AI when a key is configured, otherwise the clearly labelled demo. In live mode the demo engine
+ * also answers any single request that Gemini can't (rate limited, overloaded, too slow or unreachable).
+ */
 export function createProvider(env: Env): LifeProvider {
   const config = readConfig(env);
-  return config.apiKey ? createGeminiProvider({ ...config, apiKey: config.apiKey }) : createDemoProvider();
+  if (!config.apiKey) return createDemoProvider();
+  const gemini = createGeminiProvider({ ...config, apiKey: config.apiKey });
+  return withFallback(gemini, createDemoProvider(), { liveTimeoutMs: LIVE_DEADLINE_MS });
 }
 
 const JSON_HEADERS = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" };
@@ -108,6 +116,12 @@ function streamResponse(provider: LifeProvider, messages: ChatMessage[], clientS
         const response = await provider.respond(messages, {
           signal: abort.signal,
           onStage: (stage) => send({ type: "stage", stage }),
+          onFallback: (error) => {
+            // The details stay in the server log; the browser only learns that this answer is a demo one.
+            const cause = error.cause instanceof Error ? error.cause.message : error.cause;
+            console.warn(`[life.exe] live response failed (${error.code}); answering from the demo instead:`, cause);
+            send({ type: "fallback" });
+          },
         });
         send({ type: "result", response });
       } catch (error) {

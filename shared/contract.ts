@@ -68,6 +68,8 @@ export type ErrorCode = (typeof ERROR_CODES)[number];
 /** Events streamed back from `POST /api/life`, one per server-sent event. */
 export type StreamEvent =
   | { type: "meta"; mode: Mode }
+  /** The live AI couldn't answer this time, so this answer comes from the demo engine. The next message tries the live AI again. */
+  | { type: "fallback" }
   | { type: "stage"; stage: Stage }
   | { type: "result"; response: LifeResponse }
   | { type: "error"; code: ErrorCode };

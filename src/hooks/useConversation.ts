@@ -120,6 +120,10 @@ export function useConversation(onMode: (mode: Mode) => void) {
             mode = next;
             onMode(next);
           },
+          // Only this answer is labelled as a demo response; LIFE.EXE stays live, and the next message tries the live AI again.
+          onFallback: () => {
+            mode = "demo";
+          },
         });
         dispatch({ type: "resolve", id: pendingId, response, mode, at: Date.now() });
       } catch (error) {
