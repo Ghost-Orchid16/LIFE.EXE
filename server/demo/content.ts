@@ -1,48 +1,23 @@
 // Pre-written responses used in DEMO MODE, when no AI key is configured.
 // The interface labels every one of them as a demo response; none of this is presented as live AI.
-// They follow the same short format as live answers: the answer, the next move, words to use when
-// that helps, and two or three follow-ups. Every follow-up offered here has a reply of its own.
+// They follow the same format as live answers: the answer, the next move, and, when they help, a few
+// points, words to use and an alternative, with two or three follow-ups. Every follow-up offered
+// here has a reply of its own.
 
 import type { LifeResponse } from "../../shared/contract.ts";
+import { composeReply, initial, type DemoReply, type DemoScenario } from "./scenario.ts";
+import { LIFE_SCENARIOS } from "./scenarios/life.ts";
+import { PEOPLE_SCENARIOS } from "./scenarios/people.ts";
+import { SCHOOL_SCENARIOS } from "./scenarios/school.ts";
+import { WORK_SCENARIOS } from "./scenarios/work.ts";
 
-/** A follow-up answer. Anything left out is empty; the title stays the scenario's. */
-export type DemoReply = Pick<LifeResponse, "answer"> & Partial<Omit<LifeResponse, "answer" | "title">>;
+export { composeReply, type DemoReply, type DemoScenario };
 
-export interface DemoScenario {
-  id: string;
-  /** Each pattern that matches the person's first message adds to the scenario's score. */
-  keywords: RegExp[];
-  initial: LifeResponse;
-  /** A more fitting first answer when the person asks the question this scenario answers. */
-  asked?: { match: RegExp; answer: string };
-  direct: DemoReply;
-  firstStep: DemoReply;
-  words: DemoReply;
-  /** Scenario-specific follow-ups, checked before the generic ones. */
-  extras: Array<{ match: RegExp; reply: DemoReply }>;
-}
-
-const EMPTY: LifeResponse = {
-  care: "",
-  answer: "",
-  points: [],
-  question: "",
-  nextMove: "",
-  scripts: [],
-  alternative: "",
-  followUps: [],
-  title: "",
-};
-
-const initial = (fields: Pick<LifeResponse, "answer" | "title"> & Partial<LifeResponse>): LifeResponse => ({ ...EMPTY, ...fields });
-
-export function composeReply(reply: DemoReply, title: string): LifeResponse {
-  return { ...EMPTY, ...reply, title };
-}
-
-export const SCENARIOS: DemoScenario[] = [
+// The situations demo mode opened with. They come first, so they keep winning any tie in matching.
+const FIRST_SCENARIOS: DemoScenario[] = [
   {
     id: "career",
+    example: "I don't know which career path I should choose.",
     keywords: [/\bcareer/i, /\bpath\b/i, /\bmajor\b/i, /\bdegree\b/i, /\bstudy(ing)?\b/i, /\b(university|college)\b/i, /\bprofession/i, /\bwith my life\b/i],
     initial: initial({
       answer:
@@ -92,6 +67,7 @@ export const SCENARIOS: DemoScenario[] = [
   },
   {
     id: "friend",
+    example: "My friend hasn't talked to me for a few days.",
     keywords: [
       /\bfriend/i,
       /\b(hasn'?t|haven'?t|hasnt|havent) (talked|spoken|texted|replied|messaged|heard)/i,
@@ -164,6 +140,7 @@ export const SCENARIOS: DemoScenario[] = [
   },
   {
     id: "conversation",
+    example: "I need to have a difficult conversation.",
     keywords: [
       /\b(difficult|hard|tough|awkward|serious) (conversation|talk)\b/i,
       /\bconversation\b/i,
@@ -244,6 +221,7 @@ export const SCENARIOS: DemoScenario[] = [
   },
   {
     id: "two-options",
+    example: "I have two opportunities and don't know which one to choose.",
     keywords: [
       /\btwo (opportunit|offers|options|jobs|choices|schools|universities|colleges|internships|paths)/i,
       /\boffers?\b/i,
@@ -309,6 +287,7 @@ export const SCENARIOS: DemoScenario[] = [
   },
   {
     id: "bad-decision",
+    example: "I think I made a bad decision.",
     keywords: [
       /\b(bad|wrong|terrible|poor|stupid) (decision|choice|call)\b/i,
       /\bmistake/i,
@@ -370,6 +349,7 @@ export const SCENARIOS: DemoScenario[] = [
   },
   {
     id: "expectations",
+    example: "I'm stuck between what I want and what other people expect from me.",
     keywords: [
       /\bexpect/i,
       /\b(parents?|family|mom|mum|dad) (want|wants|expects?)\b/i,
@@ -436,10 +416,12 @@ export const SCENARIOS: DemoScenario[] = [
   },
   {
     id: "apology",
+    example: "I think I hurt someone. How do I apologize?",
     keywords: [
       // They're the one apologizing: not "my boss never apologizes", "I hurt my knee" or "I want to hurt someone".
       /\b(i|me)\b[^.?!]*\bapologi[sz]/i,
       /\b(i|me)\b[^.?!]*\bsay(ing)? sorry\b/i,
+      /\b(apologi[sz]e|say sorry) to (my|him|her|them|someone|somebody|a|the|our)\b/i,
       /\bi( think i| might have| may have| accidentally|'ve| have| didn'?t mean to)? hurt (someone|somebody|them|him|her|a friend|my (best )?friends?|(their|his|my \w+'s) feelings)\b/i,
       /\bmake (it|things) right\b/i,
     ],
@@ -491,6 +473,7 @@ export const SCENARIOS: DemoScenario[] = [
   },
   {
     id: "stuck",
+    example: "I don't know what I'm doing anymore. Everything feels stuck and I don't know where to start.",
     keywords: [
       /\bstuck\b/i,
       /\bdon'?t know where to (start|begin)\b/i,
@@ -548,9 +531,12 @@ export const SCENARIOS: DemoScenario[] = [
   },
 ];
 
+export const SCENARIOS: DemoScenario[] = [...FIRST_SCENARIOS, ...SCHOOL_SCENARIOS, ...PEOPLE_SCENARIOS, ...WORK_SCENARIOS, ...LIFE_SCENARIOS];
+
 /** For anything the scenarios above don't recognise. */
 export const GENERAL_SCENARIO: DemoScenario = {
   id: "general",
+  example: "Something odd happened at the bakery today and I'm not sure what to do.",
   keywords: [],
   initial: initial({
     answer:

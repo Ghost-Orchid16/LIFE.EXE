@@ -61,6 +61,13 @@ const everyReply: Array<[string, LifeResponse]> = [
 
 const wordsIn = (...texts: string[]) => texts.join(" ").split(/\s+/).filter(Boolean).length;
 
+// The situations added after the first eight open in the fuller shape of a live answer (a few points, words to use
+// or an alternative when they help), so their first answers get more room. Every other reply, including every
+// follow-up, stays within 80 words.
+const FULLER_FIRST_ANSWERS = new Set(
+  SCENARIOS.filter((scenario) => !(scenario.id in EXAMPLES)).flatMap((scenario) => [`${scenario.id} initial`, `${scenario.id} asked`]),
+);
+
 /** Everything an answer says, in one string. */
 const saidIn = (r: LifeResponse) => [r.care, r.answer, ...r.points, r.question, r.nextMove, ...r.scripts, r.alternative].join(" ");
 
@@ -102,7 +109,7 @@ describe("demo content", () => {
     for (const [label, r] of everyReply) {
       assert.ok(wordsIn(r.answer) <= 35, `${label}: the answer is ${wordsIn(r.answer)} words`);
       const total = wordsIn(r.answer, ...r.points, r.question, r.nextMove, ...r.scripts, r.alternative);
-      assert.ok(total <= 80, `${label}: ${total} words in all`);
+      assert.ok(total <= (FULLER_FIRST_ANSWERS.has(label) ? 120 : 80), `${label}: ${total} words in all`);
       assert.ok(r.followUps.length >= 2 && r.followUps.length <= 3, `${label}: ${r.followUps.length} follow-ups`);
       assert.ok(r.points.length <= 4 && r.scripts.length <= 3, label);
       assert.equal(r.care, "", `${label}: only safety answers use the care note`);
@@ -111,7 +118,8 @@ describe("demo content", () => {
 
   it("answers every follow-up it offers with something other than the generic fallback", () => {
     for (const scenario of everyScenario) {
-      const example = EXAMPLES[scenario.id] ?? "Something odd happened at the bakery today and I'm not sure what to do.";
+      const { example } = scenario;
+      if (scenario.id in EXAMPLES) assert.equal(example, EXAMPLES[scenario.id]);
       assert.equal(matchScenario(example)?.id ?? "general", scenario.id);
       for (const [label, reply] of repliesOf(scenario)) {
         for (const followUp of reply.followUps) {
