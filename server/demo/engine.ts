@@ -44,10 +44,17 @@ const INTENTS: ReadonlyArray<{ match: RegExp; reply: (scenario: DemoScenario) =>
 
 const isCrisis = (text: string) => CRISIS_PATTERNS.some((pattern) => pattern.test(text));
 
+// Every demo answer carries its scenario's title, so a conversation can be followed from one message to the next.
+const SCENARIOS_BY_TITLE = new Map([...SCENARIOS, GENERAL_SCENARIO].map((scenario) => [scenario.initial.title, scenario]));
+
 const wordCount = (text: string) => text.split(/\s+/).filter(Boolean).length;
 
+const countMatches = (patterns: RegExp[], text: string) =>
+  patterns.reduce((count, pattern) => count + (pattern.test(text) ? 1 : 0), 0);
+
 function scoreScenario(scenario: DemoScenario, text: string): number {
-  return scenario.keywords.reduce((score, pattern) => score + (pattern.test(text) ? 1 : 0), 0);
+  const score = countMatches(scenario.keywords, text);
+  return score === 0 ? 0 : score + countMatches(scenario.related ?? [], text);
 }
 
 /** The scenario whose keywords best match the text, or `null` if none match at all. */
@@ -98,6 +105,13 @@ export function buildDemoResponse(messages: ChatMessage[]): LifeResponse {
     return firstAnswer(scenario ?? GENERAL_SCENARIO, latest);
   }
 
-  const scenario = matchScenario(userTexts.join("\n")) ?? GENERAL_SCENARIO;
+  // After the general answer, the first message that says what it's actually about gets that situation's answer.
+  if (previous.title === GENERAL_SCENARIO.initial.title) {
+    const scenario = matchScenario(latest);
+    if (scenario) return firstAnswer(scenario, latest);
+  }
+
+  // Otherwise the conversation continues the situation already being answered, whatever words come up next.
+  const scenario = SCENARIOS_BY_TITLE.get(previous.title) ?? matchScenario(userTexts.join("\n")) ?? GENERAL_SCENARIO;
   return composeReply(pickReply(scenario, latest), scenario.initial.title);
 }
