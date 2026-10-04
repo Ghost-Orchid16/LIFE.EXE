@@ -11,6 +11,7 @@ import { createDemoProvider } from "./providers/demo.ts";
 import { withFallback } from "./providers/fallback.ts";
 import { createGeminiProvider } from "./providers/gemini.ts";
 import { LifeError, type LifeProvider } from "./providers/types.ts";
+import { referenceContext } from "./reference/context.ts";
 import { validateLifeRequest } from "./validation.ts";
 
 // Netlify stops synchronous functions after 30 seconds. Finishing a little earlier lets the
@@ -21,12 +22,13 @@ const LIVE_DEADLINE_MS = 24_000;
 
 /**
  * Live AI when a key is configured, otherwise the clearly labelled demo. In live mode the demo engine
- * also answers any single request that Gemini can't (rate limited, overloaded, too slow or unreachable).
+ * also answers any single request that Gemini can't (rate limited, overloaded, too slow or unreachable),
+ * and Gemini gets the few reference situations that resemble each conversation (see server/reference).
  */
 export function createProvider(env: Env): LifeProvider {
   const config = readConfig(env);
   if (!config.apiKey) return createDemoProvider();
-  const gemini = createGeminiProvider({ ...config, apiKey: config.apiKey });
+  const gemini = createGeminiProvider({ ...config, apiKey: config.apiKey }, { reference: referenceContext });
   return withFallback(gemini, createDemoProvider(), { liveTimeoutMs: LIVE_DEADLINE_MS });
 }
 
