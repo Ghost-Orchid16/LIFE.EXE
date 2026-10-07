@@ -97,6 +97,22 @@ export interface GeminiProviderOptions {
   fetch?: typeof fetch;
   /** Replaces the retry timing; used by tests. */
   retry?: HttpRetryOptions;
+  /**
+   * Private guidance for one conversation (see `referenceContext`), or null when there's nothing to add. It
+   * goes after the system prompt, which stays first and unchanged, so its cached prefix still matches.
+   */
+  reference?: (messages: ChatMessage[]) => string | null;
+}
+
+/** The reference guidance for this conversation. A problem with it never stops the answer itself. */
+function referenceFor(messages: ChatMessage[], reference: GeminiProviderOptions["reference"]): string | null {
+  if (!reference) return null;
+  try {
+    return reference(messages);
+  } catch (error) {
+    console.warn("[life.exe] reference matching failed; answering without it:", error instanceof Error ? error.message : error);
+    return null;
+  }
 }
 
 export function createGeminiProvider(
@@ -116,12 +132,13 @@ export function createGeminiProvider(
     mode: "live",
     async respond(messages, { signal, onStage }) {
       const tracker = createStageTracker(onStage);
+      const reference = referenceFor(messages, options.reference);
       try {
         const stream = await client.models.generateContentStream({
           model: config.model,
           contents: toContents(messages),
           config: {
-            systemInstruction: SYSTEM_PROMPT,
+            systemInstruction: reference ? [SYSTEM_PROMPT, reference] : SYSTEM_PROMPT,
             responseMimeType: "application/json",
             responseJsonSchema: GEMINI_RESPONSE_SCHEMA,
             ...(thinkingConfig && { thinkingConfig }),

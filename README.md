@@ -66,6 +66,15 @@ When no `GEMINI_API_KEY` is set, LIFE.EXE answers with pre-written responses ins
 - Demo mode is always labelled: a **Demo mode** badge in the header, a note under the input, and a **Demo response** tag on every answer. Demo answers are never presented as live AI.
 - **Backup for live mode.** With a key set, if Gemini can't answer a message because it's rate limited (429), overloaded (503 or another error on Google's side), too slow (about 24 seconds) or unreachable, demo mode answers that one message instead. The answer carries the same **Demo response** tag, and no error is shown. The app stays in live mode, and the next message tries Gemini again. Safety refusals and setup problems, such as an invalid key, are reported as before.
 
+## Reference situations
+
+Live answers draw on a private reference set of 500 real-life situations in 25 categories, from school, exams and JEE preparation to friends, family, work, money, coding and decisions. Each situation comes with the four follow-up questions people often ask next. The set was converted from the Word document "LIFE.EXE 500 Real-Life Situations and Follow-ups" into `server/reference/situations.ts`, keeping the document's numbering and wording, and every situation has a stable ID such as `friends-01`.
+
+- **Background, not a script.** For each message, LIFE.EXE finds the few situations (at most three) that resemble the conversation and adds them, with their usual follow-up questions, to Gemini's instructions as private guidance. Gemini still writes every answer from what the person actually said. It's told not to copy the references, not to assume the person's situation has the same cause or solution, and never to mention them. When nothing fits, nothing is added, and Gemini answers exactly as it did before.
+- **Meaning, not exact wording.** Matching (`server/reference/match.ts`) runs on the server in about a millisecond and calls no API. Different ways of saying the same thing share a concept (`server/reference/lexicon.ts`), so "my friend barely talks to me anymore" and "I think my friend is avoiding me" both reach "a friend acting distant and I cannot tell why". Unrelated questions, plain statements and single vague words ("I'm bored") match nothing. To help a new phrasing reach the right situation, add it to the concept that describes that idea.
+- **Follow-ups stay with their situation.** The first message counts most, so a follow-up like "What should I say to the group?" keeps the original situation's references. If a later message brings up something new, its closest situation is added too. The whole conversation still goes to Gemini as before.
+- **Only what's relevant is sent.** A matched message adds under 2 KB of guidance to the request; the full set, over 90 KB, is never sent. Nothing is added when a message suggests someone may be at risk, so LIFE.EXE's safety instructions stand alone. Demo mode, including when it answers for Gemini, doesn't use the reference set and is unchanged.
+
 ## Conversation memory
 
 LIFE.EXE remembers conversations in the browser, so someone coming back on the same browser and device can continue a situation where they left off. There's no account and no database.
@@ -109,6 +118,7 @@ server/                     API layer and AI service (no browser code)
     demo.ts                 Demo mode
     fallback.ts             Live mode's backup: demo mode answers when Gemini can't
   demo/                     Demo mode's pre-written responses and matching logic
+  reference/                The reference situations: the dataset, matching, and the guidance Gemini gets
   prompt.ts                 LIFE.EXE's instructions to the model
   schema.ts                 The structured response format, and its validation
   stages.ts                 Turns the streamed answer into progress stages
@@ -130,7 +140,7 @@ Browser ──POST /api/life──▶ handler ──▶ provider (Gemini or demo
    └──── server-sent events ──┘   meta → stage (×3) → result | error
 ```
 
-When demo mode answers for Gemini (see [Demo mode](#demo-mode)), a `fallback` event tells the browser to label that answer as a demo response.
+When demo mode answers for Gemini (see [Demo mode](#demo-mode)), a `fallback` event tells the browser to label that answer as a demo response. In live mode, the Gemini provider first adds the reference situations that resemble the conversation, if any, to its instructions (see [Reference situations](#reference-situations)).
 
 With each message the browser sends the conversation being continued, and only that one; nothing is stored on the server. Conversations are saved in the browser instead (see [Conversation memory](#conversation-memory)).
 
